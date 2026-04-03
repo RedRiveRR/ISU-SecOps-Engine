@@ -1,40 +1,30 @@
-# Temel Mimari (Core Architecture)
+# 🏗️ Core Architecture (Temel Mimari)
 
-Directory Bruteforcer, Rust ile geliştirilmiş, yüksek performanslı ve asenkron (eşzamanlı) çalışan bir güvenlik aracıdır.
+`dirbrute`, eşzamanlılık (concurrency) ve düşük gecikme süreli (low-latency) I/O operasyonları için Rust dilinin asenkron ekosistemi üzerine inşa edilmiştir.
 
-## Modül Detayları
+## 🧱 Modüler Yapı
 
-### 1. `main.rs` (Giriş Noktası)
-`clap` kütüphanesini kullanarak komut satırı argümanlarını ayrıştırır ve ilgili modüle yönlendirme yapar:
-- `Command::Pentest`: `scanner` (tarayıcı) modülüne yönlendirir.
-- `Command::Web`: `web` modülüne yönlendirir.
+### 1. `main.rs` & `cli.rs` (Execution Entry & Configuration)
+Uygulama, `clap` kütüphanesi ile yapılandırılmış tip-güvenli bir komut satırı arayüzü sunar. Komutlar iki ana iş akışına ayrılır:
+- **Pentest Engine**: `scanner` modülünü asenkron bir `tokio::task` olarak başlatır.
+- **Web Interface**: `axum` tabanlı bir HTTP sunucusu ayağa kaldırarak grafik arayüz desteği sağlar.
 
-### 2. `cli.rs` (Komut Satırı Arayüz Tanımı)
-CLI yapısını, alt komutları ve bayrakları (flags) tanımlar. `clap` kütüphanesinin makrolarını kullanarak kullanıcı dostu bir arayüz sağlar.
+### 2. `scanner.rs` (Search Engine Core)
+Sistemin çekirdeğini oluşturan asenkron tarama motoru:
+- **Non-blocking I/O**: `tokio` ve `reqwest` ile bloklamayan ağ istekleri yönetilir.
+- **Event-Driven Messaging**: Motor, durum güncellemelerini ve bulguları `tokio::sync::mpsc` kanalları üzerinden asenkron olarak yayınlar. Bu mimari, CLI ve Web arayüzünün aynı anda canlı veri tüketmesine olanak tanır.
+- **WAF Evasion Logic**: `Deep Stealth` modunda, trafik örüntülerini randomize eden otonom soğuma ve decoy istek algoritmaları bu seviyede işletilir.
+- **Client Pooling**: Proxy rotasyonu için `Arc<Vec<Client>>` yapısı kullanılarak thread-safe bir bağlantı havuzu yönetilir.
 
-### 3. `scanner.rs` (Çekirdek Tarama Motoru)
-Projenin kalbi olan bu modül şu özelliklere sahiptir:
-- **Asenkron Çalışma**: Bloklamayan I/O için `tokio`, paralel istek yönetimi için `futures` kullanır.
-- **Olay Odaklı İletişim (Event-Driven)**: Çekirdek motor, sonuçları doğrudan ekrana basmak yerine `tokio::sync::mpsc` kanalları üzerinden `ScanEvent` mesajları yayınlar. Bu sayede sonuçlar aynı anda hem CLI hem de Web arayüzü tarafından canlı olarak işlenebilir.
-- **Deep Stealth Mode (Derin Gizlilik)**: WAF ve IPS sistemlerini atlatmak için otonom *Contextual Blending* (decoy requests) ve *Cooldown* (soğuma) mekanizmalarını yönetir.
-- **Rotating Proxy Pool**: Birden fazla proxy sunucusunu `Arc<Vec<reqwest::Client>>` yapısında yöneterek her istekte rastgele IP değişimi (rotation) yapar.
-- **URL Normalizasyonu**: Eksik protokolleri (http/https) tespit eder ve varsayılan olarak `https://` ekleyerek hataları önler.
+### 3. `web.rs` & `ui/` (Communication Layer)
+- **Axum Framework**: RESTful uç noktalar ve statik dosya sunumu için optimize edilmiştir.
+- **Streaming Result Delivery**: Tarayıcı ile motor arasındaki bağlantı **Server-Sent Events (SSE)** ile kurulur. Bu sayede her bulgu anında kullanıcı ekranına yansır.
+- **Frontend Assets**: Tüm HTML/CSS/JS varlıkları derleme aşamasında binary içerisine gömülür (embedded), bu da uygulamayı tek bir bağımsız dosya haline getirir.
 
-### 4. `web.rs` (Web Arayüz Sunucusu)
-`axum` kütüphanesi üzerine inşa edilmiş entegre bir sunucudur:
-- **Gömülü Varlıklar (Embedded Assets)**: Tüm frontend dosyaları `include_str!` ile ikili dosyaya (binary) gömülür, böylece dış bağımlılık olmadan çalışır.
-- **Server-Sent Events (SSE)**: Tarayıcıya, tarama motorundan gelen `ScanEvent` mesajlarını anlık olarak akış (stream) şeklinde iletir.
-- **REST API**: Taramaları başlatmak ve izlemek için basit JSON uç noktaları sunar.
+## 🔄 Veri Akışı (Data Flow)
 
-### 5. `ui/index.html` (Frontend)
-Modern ve tek sayfalık bir frontend yapısı:
-- **Vanilla JS**: SSE bağlantısını yönetir ve UI durumunu günceller.
-- **Modern CSS**: Karanlık mod ve gelişmiş cam efekti (glassmorphism) tasarımıyla üst segment bir deneyim sunar.
-
-## Veri Akışı
-
-1. Kullanıcı taramayı başlatır (CLI veya Web üzerinden).
-2. `scanner::run_dirbrute_core` fonksiyonu ayrı bir asenkron görev (task) olarak başlatılır.
-3. Motor, kelime listesini (wordlist) okur ve eşzamanlı HTTP isteklerini gönderir.
-4. Önemli bir sonuç (örneğin 200 OK) bulunduğunda, kanal üzerinden bir `ScanEvent::Found` mesajı gönderilir.
-5. Alıcı (CLI yazıcısı veya Web SSE işleyicisi) bu mesajı alır ve kullanıcı arayüzünü anında günceller.
+1. **Initialization**: Kullanıcı girdileri doğrulanır ve `Wordlist` nesnesi belleğe yüklenir.
+2. **Channel Setup**: Motor ile arayüzler arasında mesajlaşma kanalları kurulur.
+3. **Execution**: Paralel işçiler (workers) kelime listesini işlerken, WAF sezgileme motoru sürekli geri bildirim toplar.
+4. **Event Emission**: Bulunan her yol için bir `ScanEvent` oluşturulur ve kanala asenkron olarak basılır.
+5. **Consumption**: CLI yazıcısı veya Web SSE işleyicisi gelen mesajları terminale veya tarayıcıya asenkron olarak yansıtır.

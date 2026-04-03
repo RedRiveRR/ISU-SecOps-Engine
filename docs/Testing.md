@@ -40,12 +40,20 @@ cargo run --release -- web --port 8080
 - [ ] "Deep Stealth Mode" aktifken Live Logs sekmesinde mor renkli hayalet logları görünür.
 - [ ] "Proxy Engine" alanına girilen virgüllü listeler (rootation) hata vermeden işlenir.
 - [ ] Sonuçlar bulundukça gerçek zamanlı (SSE) olarak görüntülenir.
-- [ ] İlerleme göstergesi "X yollar taranıyor..." mesajını ve bitişte "Tamamlandı" ibaresini gösterir.
+### ✅ Kabul Kriterleri (Checklist):
+- [ ] Web sunucusu belirtilen portu "non-blocking" modda dinlemeye başlar.
+- [ ] Arayüzde "Karanlık Mod" ve "Glassmorphism" efektleri hatasız render edilir.
+- [ ] SSE akışı sayesinde bulgular sayfayı yenilemeden (real-time) listeye eklenir.
+- [ ] "Proxy Engine" alanına girilen virgüllü proxy listesi hata vermeden parse edilir.
+- [ ] Tarama sonunda "Tamamlandı" statüsü ve toplam sonuç sayısı senkronize görünür.
 
-## Birim ve Entegrasyon Testleri
+## 🤖 Otomatik Testler & Linting
 
-Resmi testler için Rust'ın yerleşik test aracını kullanın:
-```bash
-cargo test
-```
-*(Şu an için proje otomatik testler eklenene kadar manuel CLI/Web doğrulaması üzerine kuruludur.)*
+Kod kalitesini ve temel fonksiyonları korumak için Rust araç setini kullanın:
+
+- **Unit Tests**: `cargo test` komutuyla çekirdek fonksiyonların regresyon testlerini yapın.
+- **Static Analysis**: `just lint` (cargo clippy) ile katı kod standartlarını denetleyin.
+- **Security Audit**: `just audit` (cargo deny) ile bağımlılık zafiyetlerini kontrol edin.
+
+---
+*(Not: Yeni özellikler eklendikçe bu test protokolü güncellenmelidir.)*

@@ -17,7 +17,7 @@
 
 ### 📖 Giriş
 
-**dirbrute**, modern web güvenliği ve sızma testleri için sıfırdan Rust ile inşa edilmiş, **hız** ve **hayalet (stealth)** odaklı bir dizin keşif motorudur. Geleneksel araçların aksine, sadece statik bir kelime listesi tarayıcısı değil; hedefteki WAF (Web Application Firewall) sistemlerini analiz eden, IP rotasyonu yapan ve akıllı algoritmalarla sahte sonuçları filtreleyen bir **Security Assessment Intelligence** çözümüdür.
+**dirbrute**, modern sızma testleri ve güvenlik denetimleri için Rust ile geliştirilmiş, ultra hızlı ve düşük izli (low-footprint) bir keşif motorudur. Standart tarayıcıların ötesine geçerek **Deep Stealth** ve **Rotating Proxy** teknolojileriyle en katı güvenlik duvarlarını (WAF) dahi profesyonel bir hassasiyetle aşmanıza olanak tanır.
 
 ---
 
@@ -94,8 +94,8 @@ cargo run --release -- pentest dirbrute "http://target.com" --stealth --crawler 
 
 Proje geliştiriciler için tam otomatize edilmiştir:
 - **`Justfile`**: `just ci` komutuyla fmt, lint, audit ve test adımlarını tek seferde yapabilirsiniz.
-- **`.vscode`**: Hata ayıklama (LLDB) ve görev otomasyonları (Tasks) hazır olarak gelir.
-- **`cargo-deny`**: Lisans ve güvenlik zafiyet denetimi her derlemede zorunludur.
+- **`.vscode`**: Hata ayıklama (LLDB) ve görev otomasyonları (Tasks) yapılandırmalarıyla hazır olarak gelir.
+- **Security**: `cargo-deny` ile tedarik zinciri (supply chain) ve zafiyet analizi her derlemede zorunludur.
 
 ---
 

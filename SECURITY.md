@@ -2,16 +2,17 @@
 
 ## Supported Versions
 
-Only the latest version of Directory Bruteforcer is currently supported for security updates.
+Currently, the following versions are actively supported with security updates:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.7.x   | :white_check_mark: |
-| < 0.7   | :x:                |
+| 1.1.x   | :white_check_mark: |
+| 1.0.x   | :white_check_mark: |
+| < 1.0   | :x:                |
 
 ## Reporting a Vulnerability
 
-We take the security of this project seriously. If you believe you have found a security vulnerability, please report it to us by following these steps:
+We prioritize the security of this project. If you identify a potential security vulnerability, please follow our responsible disclosure process:
 
 1. **Do not** open a public issue.
 2. Send an email to `mertkzlrmk@yandex.ru` or open a private security advisory on GitHub.
