@@ -107,5 +107,5 @@ Bu proje **MIT Lisansı** ile lisanslanmıştır. Araç yalnızca yasal penetras
 
 ---
 <div align="center">
-  <sub>Built with ❤️ and 🦀 by the ISU SecOps Team</sub>
+  <sub>Built with ❤️ and 🦀 by the Mert Kızılırmak</sub>
 </div>
