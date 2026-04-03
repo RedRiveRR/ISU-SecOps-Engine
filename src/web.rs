@@ -1,18 +1,21 @@
 use axum::{
-    extract::{Path, State},
-    response::{Html, sse::{Event, Sse}},
-    routing::{get, post},
     Json, Router,
+    extract::{Path, State},
+    response::{
+        Html,
+        sse::{Event, Sse},
+    },
+    routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, convert::Infallible, sync::Arc};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::{collections::HashMap, convert::Infallible, sync::Arc};
 use tokio::sync::{Mutex, mpsc};
 use tokio_stream::StreamExt;
 use tokio_stream::wrappers::ReceiverStream;
 
 use crate::cli::DirbruteArgs;
-use crate::scanner::{run_dirbrute_core, ScanEvent};
+use crate::scanner::{ScanEvent, run_dirbrute_core};
 
 static INDEX_HTML: &str = include_str!("../ui/index.html");
 static STREAM_ID_COUNTER: AtomicUsize = AtomicUsize::new(1);
@@ -52,10 +55,10 @@ pub async fn start_server(port: u16) {
     let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", port))
         .await
         .unwrap();
-        
+
     println!("[*] Web UI is running!");
     println!("[*] Open http://127.0.0.1:{} in your browser.", port);
-    
+
     axum::serve(listener, app).await.unwrap();
 }
 
@@ -67,7 +70,6 @@ async fn start_scan(
     State(state): State<AppState>,
     Json(payload): Json<ScanRequest>,
 ) -> Result<Json<ScanResponse>, axum::http::StatusCode> {
-    
     let args = DirbruteArgs {
         url: payload.url,
         wordlist: payload.wordlist,
@@ -79,6 +81,8 @@ async fn start_scan(
         show_logs: false,
         crawler: payload.crawler.unwrap_or(false),
         depth: payload.depth.unwrap_or(1),
+        output: None,
+        format: None,
     };
 
     let (tx, rx) = mpsc::channel(5000);
@@ -89,7 +93,7 @@ async fn start_scan(
     });
 
     let stream_id = format!("scan_{}", STREAM_ID_COUNTER.fetch_add(1, Ordering::SeqCst));
-    
+
     let mut streams = state.streams.lock().await;
     streams.insert(stream_id.clone(), rx);
 
@@ -100,7 +104,6 @@ async fn scan_stream(
     Path(id): Path<String>,
     State(state): State<AppState>,
 ) -> Sse<impl tokio_stream::Stream<Item = Result<Event, Infallible>>> {
-    
     let rx = {
         let mut streams = state.streams.lock().await;
         streams.remove(&id)
@@ -111,14 +114,15 @@ async fn scan_stream(
         None => {
             // Cannot find stream, returning immediate finish event
             let (tx, empty_rx) = mpsc::channel(1);
-            let _ = tx.blocking_send(ScanEvent::Error { message: "Stream not found or already consumed.".to_string() });
+            let _ = tx.blocking_send(ScanEvent::Error {
+                message: "Stream not found or already consumed.".to_string(),
+            });
             ReceiverStream::new(empty_rx)
         }
     };
 
-    let mapped_stream = stream.map(|ev| {
-        Ok(Event::default().data(serde_json::to_string(&ev).unwrap()))
-    });
+    let mapped_stream =
+        stream.map(|ev| Ok(Event::default().data(serde_json::to_string(&ev).unwrap())));
 
     Sse::new(mapped_stream).keep_alive(axum::response::sse::KeepAlive::new())
 }

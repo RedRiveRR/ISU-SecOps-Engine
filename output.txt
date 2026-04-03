@@ -1,7 +1,0 @@
-﻿[*] Starting Directory Bruteforcer for https://example.com
-[*] Wordlist: common.txt, Threads: 5
-[*] Loaded 17 paths from wordlist
-
-[+] Scan complete. Found 0 interesting paths.
-
-­şîı https://example.com

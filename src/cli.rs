@@ -73,4 +73,12 @@ pub struct DirbruteArgs {
     /// Enable HTML Crawler to discover internal links
     #[arg(short = 'C', long = "crawler")]
     pub crawler: bool,
+
+    /// Save results to file (e.g. results.json)
+    #[arg(short = 'o', long = "output")]
+    pub output: Option<String>,
+
+    /// Output format: json, csv (default: auto-detect from extension or json)
+    #[arg(short = 'f', long = "format")]
+    pub format: Option<String>,
 }
