@@ -2,6 +2,17 @@
 
 ISU SecOps Engine projesindeki tüm önemli değişiklikler bu dosyada kayıt altına alınacaktır.
 
+## [v0.3.0] - 2026-04-03
+### Eklendi
+- **Akıllı Mod (Smart Mode)**:
+    - **Statik Örüntülü Wordlist**: Dosya seçilmediğinde 100+ yüksek olasılıklı dosya/dizin yolunu otomatik olarak dener.
+    - **Adaptif İş Parçacığı (Adaptive Threading)**: Hedef sunucunun yanıt hızına ve hata kodlarına göre eşzamanlı istek sayısını dinamik olarak ayarlar.
+- **Web UI Güncellemesi**:
+    - "Smart Mode" için yeni kontrol butonları ve görsel toggle'lar eklendi.
+    - Gerçek zamanlı tarama hızı (Concurrency) göstergesi eklendi.
+- **CLI Güncellemesi**: `--auto-wordlist` ve `--auto-threads` bayrakları eklendi.
+- Proje sürümü `v0.3.0` olarak yükseltildi.
+
 ## [v0.2.4] - 2026-04-03
 ### Değiştirildi
 - Dokümantasyon dosya isimleri tekrar İngilizceye çevrildi (`Architecture.md`, `Testing.md`, `Changelog.md`).

@@ -235,7 +235,7 @@
 
     <header>
         <div class="brand-title">ISU <span>SecOps</span> Engine</div>
-        <div style="font-size: 13px; color: var(--text-muted);">v0.2.4 &middot; Dirbrute Web</div>
+        <div style="font-size: 13px; color: var(--text-muted);">v0.3.0 &middot; Dirbrute Web</div>
     </header>
 
     <main>
@@ -249,14 +249,25 @@
 
             <div class="form-group">
                 <label for="wordlist_path">Wordlist Path</label>
-                <input type="text" id="wordlist_path" placeholder="/path/to/wordlist.txt" required value="common.txt">
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="text" id="wordlist_path" placeholder="common.txt" value="common.txt" style="flex: 1;">
+                </div>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none; font-size: 12px; margin-top: 4px;">
+                    <input type="checkbox" id="auto_wordlist" style="width: auto;" onchange="toggleInputs()"> 
+                    <span>Smart Mode (Auto Wordlist)</span>
+                </label>
             </div>
 
-            <div class="form-group" style="flex-direction: row; gap: 16px;">
-                <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+            <div class="form-group">
+                <div style="display: flex; justify-content: space-between;">
                     <label for="threads">Threads</label>
-                    <input type="number" id="threads" value="10" min="1" max="100">
+                    <span id="concurrency_val" style="font-size: 12px; color: var(--primary); font-weight: bold; display: none;">Speed: 5x</span>
                 </div>
+                <input type="number" id="threads" value="10" min="1" max="100">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none; font-size: 12px; margin-top: 4px;">
+                    <input type="checkbox" id="auto_threads" style="width: auto;" onchange="toggleInputs()"> 
+                    <span>Adaptive Threading (Auto Speed)</span>
+                </label>
             </div>
 
             <button class="btn-launch" id="btn_scan" onclick="startScan()">Launch Scan</button>
@@ -287,13 +298,31 @@
             return 'status-500';
         }
 
+        function toggleInputs() {
+            const autoW = document.getElementById('auto_wordlist').checked;
+            const autoT = document.getElementById('auto_threads').checked;
+            
+            const wordlistInput = document.getElementById('wordlist_path');
+            const threadsInput = document.getElementById('threads');
+            
+            wordlistInput.disabled = autoW;
+            wordlistInput.style.opacity = autoW ? "0.4" : "1";
+            
+            threadsInput.disabled = autoT;
+            threadsInput.style.opacity = autoT ? "0.4" : "1";
+
+            document.getElementById('concurrency_val').style.display = autoT ? "inline" : "none";
+        }
+
         async function startScan() {
             let url = document.getElementById('target_url').value.trim();
             const wordlist = document.getElementById('wordlist_path').value.trim();
             const threads = parseInt(document.getElementById('threads').value);
+            const auto_wordlist = document.getElementById('auto_wordlist').checked;
+            const auto_threads = document.getElementById('auto_threads').checked;
 
-            if (!url || !wordlist) {
-                alert("Please fill in target URL and wordlist path.");
+            if (!url || (!wordlist && !auto_wordlist)) {
+                alert("Please fill in target URL and wordlist (or enable Smart Wordlist).");
                 return;
             }
 
@@ -319,7 +348,13 @@
                 const response = await fetch('/api/scan', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, wordlist, threads })
+                    body: JSON.stringify({ 
+                        url, 
+                        wordlist: auto_wordlist ? null : wordlist, 
+                        threads,
+                        auto_wordlist,
+                        auto_threads
+                    })
                 });
 
                 if (!response.ok) {
@@ -344,6 +379,9 @@
                 if (data.event === "Start") {
                     document.getElementById('progress_text').innerText = `Scanning ${data.total} paths...`;
                 } 
+                else if (data.event === "ConcurrencyUpdate") {
+                    document.getElementById('concurrency_val').innerText = `Speed: ${data.current}x`;
+                }
                 else if (data.event === "Found") {
                     foundCount++;
                     document.getElementById('result_count').innerText = `${foundCount} found`;

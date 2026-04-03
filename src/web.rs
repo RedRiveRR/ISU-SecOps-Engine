@@ -25,8 +25,10 @@ pub struct AppState {
 #[derive(Deserialize)]
 pub struct ScanRequest {
     url: String,
-    wordlist: String,
+    wordlist: Option<String>,
     threads: Option<usize>,
+    auto_wordlist: Option<bool>,
+    auto_threads: Option<bool>,
 }
 
 #[derive(Serialize)]
@@ -70,6 +72,8 @@ async fn start_scan(
         threads: payload.threads.unwrap_or(10),
         headers: vec![],
         cookie: None,
+        auto_wordlist: payload.auto_wordlist.unwrap_or(false),
+        auto_threads: payload.auto_threads.unwrap_or(false),
     };
 
     let (tx, rx) = mpsc::channel(100);

@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
 #[command(name = "secops")]
-#[command(about = "ISU SecOps Engine CLI", version = "1.0")]
+#[command(about = "ISU SecOps Engine CLI", version = "0.3.0")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,
@@ -39,8 +39,8 @@ pub struct DirbruteArgs {
     pub url: String,
 
     /// Path to the wordlist file
-    #[arg(short = 'w', long = "wordlist", required = true)]
-    pub wordlist: String,
+    #[arg(short = 'w', long = "wordlist")]
+    pub wordlist: Option<String>,
 
     /// Number of concurrent threads/requests
     #[arg(short = 't', long = "threads", default_value_t = 10)]
@@ -53,4 +53,12 @@ pub struct DirbruteArgs {
     /// Custom cookies, e.g. "session_id=12345"
     #[arg(short = 'c', long = "cookie")]
     pub cookie: Option<String>,
+
+    /// Enable Smart Wordlist (Static Patterning)
+    #[arg(long = "auto-wordlist")]
+    pub auto_wordlist: bool,
+
+    /// Enable Adaptive Threading (Auto performance scaling)
+    #[arg(long = "auto-threads")]
+    pub auto_threads: bool,
 }
