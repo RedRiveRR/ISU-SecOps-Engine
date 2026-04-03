@@ -1,7 +1,7 @@
 [package]
 name = "dirbrute"
 version = "0.7.0"
-authors = ["Mert Kızılırmak <RedRiveRR>"]
+authors = ["Mert Kızılırmak <mertkzlrmk@yandex.ru>"]
 edition = "2024"
 
 [dependencies]
