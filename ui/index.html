@@ -57,12 +57,14 @@
             letter-spacing: -0.5px;
             background: linear-gradient(90deg, #f0f4f8, #8b9bb4);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
         .brand-title span {
             color: var(--primary);
             -webkit-background-clip: unset;
+            background-clip: unset;
             -webkit-text-fill-color: unset;
         }
 
@@ -233,7 +235,7 @@
 
     <header>
         <div class="brand-title">ISU <span>SecOps</span> Engine</div>
-        <div style="font-size: 13px; color: var(--text-muted);">v0.2.0 &middot; Dirbrute Web</div>
+        <div style="font-size: 13px; color: var(--text-muted);">v0.2.4 &middot; Dirbrute Web</div>
     </header>
 
     <main>
@@ -286,13 +288,19 @@
         }
 
         async function startScan() {
-            const url = document.getElementById('target_url').value;
-            const wordlist = document.getElementById('wordlist_path').value;
+            let url = document.getElementById('target_url').value.trim();
+            const wordlist = document.getElementById('wordlist_path').value.trim();
             const threads = parseInt(document.getElementById('threads').value);
 
             if (!url || !wordlist) {
                 alert("Please fill in target URL and wordlist path.");
                 return;
+            }
+
+            // Normalize URL: Ensure protocol is present
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+                document.getElementById('target_url').value = url; // Update field for feedback
             }
 
             // Reset UI

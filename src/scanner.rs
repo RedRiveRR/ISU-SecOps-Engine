@@ -110,10 +110,15 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
     
     let total = paths.len();
     
-    let base_url = args.url.trim_end_matches('/');
+    let url_input = args.url.trim();
+    let base_url = if url_input.starts_with("http://") || url_input.starts_with("https://") {
+        url_input.trim_end_matches('/').to_string()
+    } else {
+        format!("https://{}", url_input.trim_end_matches('/'))
+    };
 
     let _ = tx.send(ScanEvent::Start { 
-        target: args.url.clone(), 
+        target: base_url.clone(), 
         total 
     }).await;
 
