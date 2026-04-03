@@ -1,78 +1,107 @@
-# 🚀 dirbrute v1.1.0 — High-Performance Stealth Discovery Engine
+# 🛸 dirbrute v1.1.0
+## *High-Performance Stealth Discovery & Security Assessment Engine*
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Rust-1.75%2B-orange.svg?style=for-the-badge&logo=rust" />
-  <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20MacOS-lightgrey?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Status-Stable-green.svg?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/VERSION-1.1.0-blue?style=for-the-badge&logo=github" />
+  <img src="https://img.shields.io/badge/RUST-1.75%2B-orange?style=for-the-badge&logo=rust" />
+  <img src="https://img.shields.io/badge/LICENSE-MIT-green?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/PLATFORM-WINDOWS%20%7C%20LINUX%20%7C%20MACOS-lightgrey?style=for-the-badge" />
+  <br>
+  <img src="https://img.shields.io/badge/MAINTENANCE-ACTIVE-brightgreen?style=flat-square" />
+  <img src="https://img.shields.io/badge/PRs-WELCOME-blueviolet?style=flat-square" />
+  <img src="https://img.shields.io/badge/SECURE-WAF_EVASION-red?style=flat-square" />
+  <img src="https://img.shields.io/badge/INTERFACE-WEB_%7C_CLI-blue?style=flat-square" />
 </div>
 
 ---
 
-**dirbrute**, modern web güvenlik testleri için tasarlanmış, Rust tabanlı, ultra hızlı bir dizin ve dosya keşif motorudur. Geleneksel tarayıcıların ötesine geçerek **Deep Stealth** ve **Rotating Proxy** teknolojileriyle en katı firewall (WAF) mekanizmalarını dahi aşmanıza olanak tanır.
+### 📖 Giriş
+
+**dirbrute**, modern web güvenliği ve sızma testleri için sıfırdan Rust ile inşa edilmiş, **hız** ve **hayalet (stealth)** odaklı bir dizin keşif motorudur. Geleneksel araçların aksine, sadece statik bir kelime listesi tarayıcısı değil; hedefteki WAF (Web Application Firewall) sistemlerini analiz eden, IP rotasyonu yapan ve akıllı algoritmalarla sahte sonuçları filtreleyen bir **Security Assessment Intelligence** çözümüdür.
 
 ---
 
-## 💎 Neden dirbrute?
+### 💎 Temel Modüller ve Özellikler
 
-Diğer araçların aksine `dirbrute`, sadece bir istek atıcı değil; bir **otonom keşif ekosistemidir**.
+#### 🥷 1. Deep Stealth & WAF Evasion (v1.1.0)
+Modern firewall sistemleri (Cloudflare, Akamai, AWS Shield) basit bruteforce denemelerini anında engeller. `dirbrute` bu engelleri aşmak için şu metodları kullanır:
+- **Contextual Blending**: Tarama trafiği arasına otomatik olarak `/robots.txt`, `/favicon.ico`, `/assets/logo.png` gibi zararsız "decoy" istekler serpiştirerek trafiği gerçek kullanıcı gibi gösterir.
+- **Autonomous Cooldown**: Sistem bloklandığını (403/429) anladığında tüm iş parçacıklarını 60 saniye boyunca otonom olarak uyutur ve "tehdit algısını" sıfırlar.
+- **Jitter & UA Rotation**: Her istek arasına mikro-gecikmeler ekler ve binlerce gerçek tarayıcı "User-Agent" bilgisi arasında rotasyon yapar.
 
-- **🥷 Deep Stealth Mode**: Cloudflare, Akamai ve AWS Shield gibi sistemlerin radarından kaçmak için akıllı "Contextual Blending" (aldatıcı trafik) ve dinamik soğuma (Cooldown) kullanır.
-- **🔄 Rotating Proxy Pool**: Her bir istek için farklı bir IP mimarisi üzerinden çıkış yaparak kaynağınızı tamamen perdelere boğar.
-- **🛰️ HTML Crawler & nipper**: Sayfa içerisindeki tüm linkleri anlık olarak ayrıştırır ve statik listelerle ulaşılamayan "gömülü" yolları bulur.
-- **🧠 Smart Mode (Auto-Everything)**: Ne kelime listesi seçin ne de thread ayarıyla uğraşın. Sistem, hedef sunucunun tepkisine göre vites artırıp azaltır.
-- **🎨 Glassmorphism Web UI**: Backend kadar şık, karanlık mod destekli ve gerçek zamanlı (SSE) veri akışlı bir kontrol paneli.
+#### 🔄 2. Rotating Proxy Pool (v1.1.0)
+Tek bir IP üzerinden yapılan binlerce istek, ne kadar gizli olsa da yakalanır. 
+- **Proxy Rotation**: Virgülle ayrılmış yüzlerce HTTP/SOCKS5 proxy adresi tanımlayabilirsiniz.
+- **Random Picking**: Her bir işçi (worker), her yeni istek için havuzdan rastgele bir proxy seçerek çıkış IP'sini sürekli değiştirir.
+
+#### 🛰️ 3. Dynamic HTML Crawler
+Bruteforce ile ulaşılamayan JS dosyaları, CSS'ler veya derin sayfalar içindeki URL'leri `nipper` motoruyla gerçek zamanlı olarak ayrıştırır. Bulunan tüm dahili bağlantıları otomatik olarak tarama kuyruğuna ekler.
+
+#### 🧠 4. Smart Content Discovery
+- **Technology Fingerprinting**: Hedefin WordPress, Laravel, Docker, Django veya GraphQL olduğunu anında tespit eder ve ona göre tarama önceliği belirler.
+- **Heuristic 404 Filter**: "Sahte 200" (Soft-404) dönen sitelerde baseline analizi yaparak tüm yanlış pozitifleri eler.
+- **Adaptive Threading**: Sunucu yanıt sürelerini ölçer; sunucu hızlıysa hızlanır, gecikme artarsa otomatik vites küçültür.
 
 ---
 
-## ⚡ Hızlı Başlangıç
+### 🚀 Hızlı Başlangıç
 
-### Derleme
+#### 🛠️ Kurulum
 ```bash
 git clone https://github.com/RedRiveRR/ISU-SecOps-Engine
 cd ISU-SecOps-Engine
 cargo build --release
 ```
 
-### 🌐 Web Arayüzünü Başlat
+#### 🌐 Web Kontrol Paneli (Web UI)
+Modern, cam efektli (Glassmorphism) ve gerçek zamanlı karanlık mod paneli:
 ```bash
-# Otomatik olarak tarayıcı panelini açar
 cargo run --release -- web --port 8080
 ```
 
-### 💻 CLI ile "Hayalet" Tarama
+#### 💻 CLI - Gelişmiş Kullanım
 ```bash
-cargo run --release -- pentest dirbrute "http://target.com" --stealth --proxy "http://p1:8080,socks5://p2:1080"
+# Akıllı ve Hayalet Mod kombinasyonu
+cargo run --release -- pentest dirbrute "http://target.com" --stealth --crawler --auto-wordlist --proxy "http://p1:8080,socks5://p2:1080"
 ```
 
 ---
 
-## 🛠️ Teknik Yetenekler
+### 📊 CLI Parametre Referansı
 
-| Özellik | Açıklama |
-| :--- | :--- |
-| **Fingerprinting** | Hedefin WP, Laravel, Docker veya API olduğunu anında teşhis eder. |
-| **Heuristic 404** | "Sahte 200" dönen sistemlerde hatayı baseline analiziyle eler. |
-| **Adaptive Threading** | Sunucu yorulunca yavaşlar, rahatlayınca ışık hızına çıkar. |
-| **Recursive Discovery** | `/admin` bulunca altını da (`/admin/config`) otomatik eşeler. |
-| **JSON/CSV Export** | Bulguları temiz raporlar halinde dışa aktarır. |
-
----
-
-## 🏗️ Geliştirici Ekosistemi
-
-Proje, profesyonel bir yazılım hattı (pipeline) üzerine kuruludur:
-
-- **Commander**: `Justfile` ve `Makefile` ile otomatize edilmiş CI/CD komutları.
-- **Linter**: `Clippy` ile katı kod kalitesi denetimi.
-- **Formatter**: `rustfmt` ve `taplo` ile nizami kod ve konfigürasyon yapısı.
-- **Security**: `cargo-deny` ile tedarik zinciri ve zafiyet analizi.
+| Parametre | Kısa | Açıklama |
+| :--- | :--- | :--- |
+| `url` | - | Hedef URL (Zorunlu) |
+| `--wordlist` | `-w` | Özel kelime listesi yolu |
+| `--auto-wordlist` | - | Akıllı (dahili) kelime listesini açar |
+| `--auto-threads` | - | Otomatik hız ayarlama (Adaptive) |
+| `--threads` | `-t` | Maksimum eşzamanlı istek (Varsayılan: 10) |
+| `--stealth` | `-s` | **Deep Stealth** modunu aktif eder |
+| `--proxy` | `-p` | Virgülle ayrılmış proxy havuzu |
+| `--crawler` | `-C` | HTML Crawler motorunu açar |
+| `--output` | `-o` | Rapor yolu (JSON/CSV) |
 
 ---
 
-## 📜 Lisans & Yazar
+### 🏗️ Teknoloji Stack & Geliştirici Ekosistemi
 
-Bu proje [MIT Lisansı](LICENSE) ile korunmaktadır. 
+<div align="center">
+  <img src="https://img.shields.io/badge/Tokio-Runtime-000000?style=flat&logo=rust" />
+  <img src="https://img.shields.io/badge/Axum-API-blue?style=flat&logo=rust" />
+  <img src="https://img.shields.io/badge/Reqwest-HTTP-orange?style=flat&logo=rust" />
+  <img src="https://img.shields.io/badge/Serde-Serialization-yellow?style=flat&logo=rust" />
+</div>
+
+Proje geliştiriciler için tam otomatize edilmiştir:
+- **`Justfile` / `Makefile`**: `just ci` komutuyla fmt, lint, audit ve test adımlarını tek seferde yapabilirsiniz.
+- **`.vscode`**: Hata ayıklama (LLDB) ve görev otomasyonları (Tasks) hazır olarak gelir.
+- **`cargo-deny`**: Lisans ve güvenlik zafiyet denetimi her derlemede zorunludur.
+
+---
+
+### 📜 Lisans & Sorumluluk Reddİ
+
+Bu proje **MIT Lisansı** ile lisanslanmıştır. Araç yalnızca yasal penetrasyon testleri ve eğitim amaçlı tasarlanmıştır. İzinsiz kullanımda tüm sorumluluk kullanıcıya aittir.
 
 **Geliştiren:** [Mert Kızılırmak (RedRiveRR)](https://github.com/RedRiveRR)
 
