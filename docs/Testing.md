@@ -1,6 +1,6 @@
 # Test Prosedürü (Testing)
 
-ISU SecOps Engine hem Komut Satırı Arayüzü (CLI) hem de Web Arayüzü modlarında test edilebilir.
+Directory Bruteforcer hem Komut Satırı Arayüzü (CLI) hem de Web Arayüzü modlarında test edilebilir.
 
 ## CLI Modu Testi
 

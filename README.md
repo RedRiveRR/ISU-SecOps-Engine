@@ -1,15 +1,20 @@
-# ISU SecOps Engine (v0.7.0)
+# Directory Bruteforcer (v0.8.0)
 
-![Build Status](https://github.com/<username>/ISU-SecOps-Engine/actions/workflows/rust.yml/badge.svg)
+![Build Status](https://github.com/RedRiveRR/ISU-SecOps-Engine/actions/workflows/rust.yml/badge.svg)
+![Rust Version](https://img.shields.io/badge/rust-1.75%2B-orange.svg)
+![Platform](https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macos-lightgrey)
+![Maintenance](https://img.shields.io/badge/maintenance-active-green.svg)
+![Code Style](https://img.shields.io/badge/code%20style-strictly%20rust-blueviolet.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Author](https://img.shields.io/badge/author-Mert%20Kızılırmak%20(RedRiveRR)-blue.svg)
 
-ISU SecOps Engine, Rust ile yazılmış yüksek performanslı bir dizin ve dosya keşif (bruteforce) aracıdır. Web sunucularındaki gizli yolları eşzamanlı ağ istekleri yardımıyla son derece hızlı bir şekilde bulmak için tasarlanmıştır.
+**Directory Bruteforcer**, Rust ile yazılmış yüksek performanslı bir dizin ve dosya keşif (bruteforce) aracıdır. Web sunucularındaki gizli yolları eşzamanlı ağ istekleri yardımıyla son derece hızlı bir şekilde bulmak için tasarlanmıştır.
 
 Kullanım kolaylığı sağlayan iki güçlü arayüz ile birlikte gelir:
 1. **Komut Satırı Arayüzü (CLI)**: Terminal tutkunları için, gerçek zamanlı hiyerarşik (ağaç yapısında) sonuç görüntüleme desteği sunar.
 2. **Modern Web Arayüzü**: Tamamen yerel (local) olarak çalışan, şık, karanlık temalı (dark mode) ve "glassmorphism" tasarım estetiğine sahip gelişmiş bir kontrol panelidir.
 
-## ✨ Yeni Nesil Özellikler (v0.7.0)
+## ✨ Yeni Nesil Özellikler (v0.8.0)
 
 - **Akıllı İçerik Analizi (Smart Content)**: Bulunan yolların sadece HTTP Status koduna bakmak yerine arka planda içeriğini (`<title>`) ve boyutunu (`Content-Length`) çıkararak olası false-positive durumlarını filtrelemenize yardımcı olur.
 - **Yeniden Yinelemeli (Recursive) Tarama**: Bulunan dizinlerin altına otomatik olarak inme yeteneği (örneğin `/admin` -> `/admin/config.php`).
@@ -35,7 +40,7 @@ cd ISU-SecOps-Engine
 cargo build --release
 ```
 
-Derleme bittikten sonra çalıştırılabilir programınız `target/release/secops.exe` dizininde hazır olacaktır.
+Derleme bittikten sonra çalıştırılabilir programınız `target/release/dirbrute.exe` dizininde hazır olacaktır.
 
 ## Kullanım
 
@@ -48,7 +53,6 @@ cargo run --release -- web
 ```
 
 - Özel bir port belirlemek isterseniz: `cargo run --release -- web --port 3000`
-- Arayüzden **Smart Mode** seçeneklerini açarak sistemin hızı ve yolları kendi seçmesini sağlayabilirsiniz.
 
 ### 💻 Komut Satırı Arayüzü (CLI)
 
@@ -95,4 +99,4 @@ Daha fazla detay için `docs/` klasöründeki Türkçe rehberlere göz atabilirs
 
 ## Lisans
 
-Bu proje [MIT Lisansı](LICENSE) ile lisanslanmıştır.
+Bu proje [MIT Lisansı](LICENSE) ile lisanslanmıştır. (c) 2026 Mert Kızılırmak (RedRiveRR)

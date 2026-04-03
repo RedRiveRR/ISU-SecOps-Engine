@@ -1,8 +1,8 @@
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
-#[command(name = "secops")]
-#[command(about = "ISU SecOps Engine CLI", version = "0.5.0")]
+#[command(name = "dirbrute")]
+#[command(about = "Directory Bruteforcer CLI", version = "0.7.0")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,

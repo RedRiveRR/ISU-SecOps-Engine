@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Only the latest version of ISU-SecOps-Engine is currently supported for security updates.
+Only the latest version of Directory Bruteforcer is currently supported for security updates.
 
 | Version | Supported          |
 | ------- | ------------------ |

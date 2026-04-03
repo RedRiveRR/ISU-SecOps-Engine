@@ -202,7 +202,7 @@ pub async fn run_dirbrute_core(
     }
 
     let client = reqwest::Client::builder()
-        .user_agent("secops-dirbrute/1.0")
+        .user_agent("dirbrute/1.0")
         .default_headers(header_map)
         .redirect(reqwest::redirect::Policy::none())
         .timeout(Duration::from_secs(10))
@@ -264,7 +264,7 @@ pub async fn run_dirbrute_core(
 
     // --- Soft-404 Calibration ---
     let mut soft_404_baseline: Option<(u16, u64)> = None;
-    let random_path = "ISU-SecOps-Heuristic-404-Test";
+    let random_path = "DirBrute-Heuristic-404-Test";
     if let Ok(resp) = client
         .get(format!("{}/{}", base_url, random_path))
         .send()

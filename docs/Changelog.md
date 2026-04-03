@@ -1,11 +1,19 @@
 # Değişim Günlüğü (Changelog)
 
-ISU SecOps Engine projesindeki tüm önemli değişiklikler bu dosyada kayıt altına alınacaktır.
+Directory Bruteforcer projesindeki tüm önemli değişiklikler bu dosyada kayıt altına alınacaktır.
+
+## [v0.8.0] - 2026-04-03
+### Değiştirildi
+- **Yeniden Markalama**: Proje adı "ISU SecOps Engine" yerine "**Directory Bruteforcer**" (`dirbrute`) olarak değiştirildi.
+- **Yazar Bilgisi**: Metadata ve lisans bilgileri "Mert Kızılırmak (RedRiveRR)" olarak güncellendi.
+- **README Tasarımı**: Proje dokümantasyonu premium rozetler (rebuild status, rust version, platform, license vb.) ile zenginleştirildi.
+### Eklendi
+- **Veri Dışa Aktarma (Export)**: Tarama sonuçlarını JSON ve CSV formatında kaydetme özelliği eklendi (`--output` / `-o`).
 
 ## [v0.7.0] - 2026-04-03
 ### Eklendi
 - **Soft-404 Heuristic Filter**: 
-    - "Dinamik Kalibrasyon" motoru eklendi. Tarama öncesi otomatik olarak `/ISU-SecOps-Heuristic-404-Test` yoluna istek atılarak sunucunun hata sayfası boyutu belirlenir.
+    - "Dinamik Kalibrasyon" motoru eklendi. Tarama öncesi otomatik olarak `/DirBrute-Heuristic-404-Test` yoluna istek atılarak sunucunun hata sayfası boyutu belirlenir.
     - Sahte 200 dönen sistemler için baseline karşılaştırmalı akıllı filtreleme getirildi.
 - **Teknoloji Parmak İzi (Technology Fingerprinting)**:
     - Bulunan yollar üzerinden (WordPress, Node.js, Docker, PHP vb.) altyapı tespiti yapan motor entegre edildi.

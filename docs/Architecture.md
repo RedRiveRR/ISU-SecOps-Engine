@@ -1,6 +1,6 @@
 # Temel Mimari (Core Architecture)
 
-ISU SecOps Engine, Rust ile geliştirilmiş, yüksek performanslı ve asenkron (eşzamanlı) çalışan bir güvenlik aracıdır.
+Directory Bruteforcer, Rust ile geliştirilmiş, yüksek performanslı ve asenkron (eşzamanlı) çalışan bir güvenlik aracıdır.
 
 ## Modül Detayları
 
