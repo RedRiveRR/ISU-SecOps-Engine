@@ -1,5 +1,6 @@
 mod cli;
 mod scanner;
+mod web;
 
 use clap::Parser;
 use cli::{Cli, Command, PentestCommand};
@@ -15,6 +16,9 @@ async fn main() {
                     scanner::run_dirbrute(args).await;
                 }
             }
+        }
+        Command::Web(web_args) => {
+            web::start_server(web_args.port).await;
         }
     }
 }

@@ -11,6 +11,14 @@ pub struct Cli {
 #[derive(Subcommand, Debug)]
 pub enum Command {
     Pentest(PentestArgs),
+    Web(WebArgs),
+}
+
+#[derive(Parser, Debug)]
+pub struct WebArgs {
+    /// Port for the web interface
+    #[arg(short, long, default_value_t = 8080)]
+    pub port: u16,
 }
 
 #[derive(Parser, Debug)]

@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISU SecOps Engine | Web UI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f111a;
+            --text-main: #f0f4f8;
+            --text-muted: #8b9bb4;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --card-bg: rgba(30, 33, 43, 0.6);
+            --card-border: rgba(255, 255, 255, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.15), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.1), transparent 25%);
+            background-attachment: fixed;
+        }
+
+        header {
+            padding: 24px 48px;
+            border-bottom: 1px solid var(--card-border);
+            background: rgba(15, 17, 26, 0.8);
+            backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .brand-title {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(90deg, #f0f4f8, #8b9bb4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-title span {
+            color: var(--primary);
+            -webkit-background-clip: unset;
+            -webkit-text-fill-color: unset;
+        }
+
+        main {
+            padding: 48px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 32px;
+            flex: 1;
+        }
+
+        @media (max-width: 900px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .btn-launch {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+
+        .btn-launch:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-launch:active {
+            transform: translateY(1px);
+        }
+
+        .results-panel {
+            height: calc(100vh - 180px);
+            overflow-y: auto;
+        }
+
+        .results-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+        .results-panel::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .results-panel::-webkit-scrollbar-thumb {
+            background: var(--card-border);
+            border-radius: 4px;
+        }
+
+        .tree-view {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 8px;
+            color: #fff;
+        }
+
+        .status-200 { background: var(--success); }
+        .status-300 { background: var(--warning); }
+        .status-400 { background: var(--danger); }
+        .status-500 { background: darkred; }
+
+        .log-line {
+            padding: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .progress-container {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            margin-top: -10px;
+        }
+
+        .loader {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--text-muted);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s infinite linear;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand-title">ISU <span>SecOps</span> Engine</div>
+        <div style="font-size: 13px; color: var(--text-muted);">v1.0 &middot; Dirbrute Web</div>
+    </header>
+
+    <main>
+        <div class="panel">
+            <h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> Scan Configuration</h2>
+            
+            <div class="form-group">
+                <label for="target_url">Target URL</label>
+                <input type="url" id="target_url" placeholder="http://example.com" required value="http://localhost:8000">
+            </div>
+
+            <div class="form-group">
+                <label for="wordlist_path">Wordlist Path</label>
+                <input type="text" id="wordlist_path" placeholder="/path/to/wordlist.txt" required value="common.txt">
+            </div>
+
+            <div class="form-group" style="flex-direction: row; gap: 16px;">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                    <label for="threads">Threads</label>
+                    <input type="number" id="threads" value="10" min="1" max="100">
+                </div>
+            </div>
+
+            <button class="btn-launch" id="btn_scan" onclick="startScan()">Launch Scan</button>
+
+            <div class="progress-container" id="progress_indicator">
+                <div class="loader"></div>
+                <span style="font-size: 13px; color: var(--text-muted);" id="progress_text">Scanning...</span>
+            </div>
+        </div>
+
+        <div class="panel results-panel">
+            <h2>Results <span id="result_count" style="font-size: 12px; font-weight: normal; margin-left: auto; color: var(--text-muted); background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 12px;">0 found</span></h2>
+            <div class="tree-view" id="results_container">
+                <div style="text-align: center; color: var(--text-muted); margin-top: 40px; font-style: italic;">
+                    Enter target and wordlist to begin directory discovery.
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let eventSource = null;
+
+        function getStatusClass(code) {
+            if (code >= 200 && code < 300) return 'status-200';
+            if (code >= 300 && code < 400) return 'status-300';
+            if (code >= 400 && code < 500) return 'status-400';
+            return 'status-500';
+        }
+
+        async function startScan() {
+            const url = document.getElementById('target_url').value;
+            const wordlist = document.getElementById('wordlist_path').value;
+            const threads = parseInt(document.getElementById('threads').value);
+
+            if (!url || !wordlist) {
+                alert("Please fill in target URL and wordlist path.");
+                return;
+            }
+
+            // Reset UI
+            document.getElementById('results_container').innerHTML = '';
+            document.getElementById('result_count').innerText = '0 found';
+            document.getElementById('btn_scan').disabled = true;
+            document.getElementById('btn_scan').style.opacity = '0.5';
+            document.getElementById('progress_indicator').style.display = 'flex';
+            document.getElementById('progress_text').innerText = 'Starting...';
+
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            try {
+                const response = await fetch('/api/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, wordlist, threads })
+                });
+
+                if (!response.ok) {
+                    throw new Error(await response.text());
+                }
+
+                const data = await response.json();
+                connectSSE(data.stream_id);
+            } catch (err) {
+                alert("Error starting scan: " + err.message);
+                scanFinished();
+            }
+        }
+
+        function connectSSE(streamId) {
+            eventSource = new EventSource(`/api/scan/stream/${streamId}`);
+            let foundCount = 0;
+
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                
+                if (data.event === "Start") {
+                    document.getElementById('progress_text').innerText = `Scanning ${data.total} paths...`;
+                } 
+                else if (data.event === "Found") {
+                    foundCount++;
+                    document.getElementById('result_count').innerText = `${foundCount} found`;
+                    
+                    const res = data.result;
+                    const el = document.createElement('div');
+                    el.className = 'log-line';
+                    
+                    let pathText = res.path.startsWith('/') ? res.path : '/' + res.path;
+                    
+                    el.innerHTML = `
+                        <span>
+                            <span style="color: #6366f1; margin-right: 8px;">></span> 
+                            ${pathText}
+                        </span>
+                        <span class="status-badge ${getStatusClass(res.status)}">${res.status}</span>
+                    `;
+                    document.getElementById('results_container').appendChild(el);
+                    
+                    // Auto-scroll to bottom
+                    const panel = document.querySelector('.results-panel');
+                    panel.scrollTop = panel.scrollHeight;
+                }
+                else if (data.event === "Error") {
+                    const el = document.createElement('div');
+                    el.className = 'log-line';
+                    el.style.color = 'var(--danger)';
+                    el.innerText = `[Error] ${data.message}`;
+                    document.getElementById('results_container').appendChild(el);
+                }
+                else if (data.event === "Finished") {
+                    document.getElementById('progress_text').innerText = `Completed. Found ${data.total_found}.`;
+                    scanFinished(true);
+                }
+            };
+
+            eventSource.onerror = function() {
+                eventSource.close();
+                scanFinished();
+            };
+        }
+
+        function scanFinished(success = false) {
+            document.getElementById('btn_scan').disabled = false;
+            document.getElementById('btn_scan').style.opacity = '1';
+            const progress = document.getElementById('progress_indicator');
+            if (!success) progress.style.display = 'none';
+            else {
+                document.querySelector('.loader').style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

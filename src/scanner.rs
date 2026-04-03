@@ -6,23 +6,65 @@ use colored::*;
 use std::time::Duration;
 use std::collections::BTreeMap;
 use crate::cli::DirbruteArgs;
+use tokio::sync::mpsc;
+use serde::Serialize;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ScanResult {
     pub path: String,
-    pub status: StatusCode,
+    pub status: u16,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "event")]
+pub enum ScanEvent {
+    Start { target: String, total: usize },
+    Found { result: ScanResult },
+    Error { message: String },
+    Finished { total_found: usize },
 }
 
 #[derive(Debug, Default)]
 struct TreeNode {
-    status: Option<StatusCode>,
+    status: Option<u16>,
     children: BTreeMap<String, TreeNode>,
 }
 
 pub async fn run_dirbrute(args: DirbruteArgs) {
-    println!("{} Starting Directory Bruteforcer for {}", "[*]".blue(), args.url.bold());
-    println!("{} Wordlist: {}, Threads: {}", "[*]".blue(), args.wordlist, args.threads);
+    let (tx, mut rx) = mpsc::channel(100);
+    
+    let args_clone = args.clone();
+    let scan_handle = tokio::spawn(async move {
+        run_dirbrute_core(args_clone, tx).await;
+    });
 
+    let mut results = Vec::new();
+
+    while let Some(event) = rx.recv().await {
+        match event {
+            ScanEvent::Start { target, total } => {
+                println!("{} Starting Directory Bruteforcer for {}", "[*]".blue(), target.bold());
+                println!("{} Loaded {} paths from wordlist", "[*]".blue(), total);
+            }
+            ScanEvent::Found { result } => {
+                // In CLI, we might want to just collect them and print tree at end.
+                // Or print as we go. The old behavior was to just collect and print tree.
+                results.push(result);
+            }
+            ScanEvent::Error { message } => {
+                eprintln!("{} {}", "[!]".red(), message);
+            }
+            ScanEvent::Finished { total_found } => {
+                println!("\n{} Scan complete. Found {} interesting paths.\n", "[+]".green(), total_found);
+                print_real_tree(&args.url, &results);
+            }
+        }
+    }
+    
+    let _ = scan_handle.await;
+}
+
+pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) {
     let mut header_map = HeaderMap::new();
 
     for h in &args.headers {
@@ -50,7 +92,7 @@ pub async fn run_dirbrute(args: DirbruteArgs) {
     let file = match File::open(&args.wordlist).await {
         Ok(f) => f,
         Err(e) => {
-            eprintln!("{} Failed to open wordlist: {}", "[!]".red(), e);
+            let _ = tx.send(ScanEvent::Error { message: format!("Failed to open wordlist: {}", e) }).await;
             return;
         }
     };
@@ -67,9 +109,13 @@ pub async fn run_dirbrute(args: DirbruteArgs) {
     }
     
     let total = paths.len();
-    println!("{} Loaded {} paths from wordlist", "[*]".blue(), total);
-
+    
     let base_url = args.url.trim_end_matches('/');
+
+    let _ = tx.send(ScanEvent::Start { 
+        target: args.url.clone(), 
+        total 
+    }).await;
 
     let results = stream::iter(paths)
         .map(|path| {
@@ -87,10 +133,13 @@ pub async fn run_dirbrute(args: DirbruteArgs) {
             if let Ok((original_path, Ok(response))) = res {
                 let status = response.status();
                 if is_interesting_status(status) {
-                    Some(ScanResult {
+                    let sr = ScanResult {
                         path: original_path,
-                        status,
-                    })
+                        status: status.as_u16(),
+                    };
+                    // Send found event
+                    let _ = tx.send(ScanEvent::Found { result: sr.clone() }).await;
+                    Some(sr)
                 } else {
                     None
                 }
@@ -101,9 +150,7 @@ pub async fn run_dirbrute(args: DirbruteArgs) {
         .collect::<Vec<_>>()
         .await;
 
-    println!("\n{} Scan complete. Found {} interesting paths.\n", "[+]".green(), results.len());
-
-    print_real_tree(&args.url, &results);
+    let _ = tx.send(ScanEvent::Finished { total_found: results.len() }).await;
 }
 
 fn is_interesting_status(status: StatusCode) -> bool {
@@ -143,8 +190,8 @@ fn print_real_tree(base_url: &str, results: &[ScanResult]) {
 
         let mut text = format!("{}{}{}", prefix, marker, name);
         if let Some(status) = node.status {
-            let code_str = format!("{}", status.as_u16());
-            let colored_code = match status.as_u16() {
+            let code_str = format!("{}", status);
+            let colored_code = match status {
                 200..=204 => code_str.green(),
                 301..=308 => code_str.yellow(),
                 401..=403 => code_str.red(),
