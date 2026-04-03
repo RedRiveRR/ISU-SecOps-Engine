@@ -182,7 +182,6 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
     let (done_tx, mut done_rx) = mpsc::channel::<(Option<ScanResult>, String)>(10000); // Task completion
     let mut results_vec = Vec::new();
     let mut active_tasks = 0;
-    let mut wordlist_finished = false;
 
     // Load initial paths
     {
@@ -195,19 +194,19 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
         }
     }
     
-    // Drop the master_tx so that queue_rx.recv() returns None when all clones are gone.
-    drop(master_tx);
+    // We do NOT drop master_tx here so that queue_rx.recv() blocks when empty
+    // until active tasks complete. The loop will break when active_tasks == 0 && queue_rx.is_empty().
     
     // Main processing loop
     loop {
-        // Exit condition: no active tasks AND queue is empty/closed
-        if active_tasks == 0 && (wordlist_finished || queue_rx.is_empty()) {
+        // Exit condition: no active tasks AND queue is empty
+        if active_tasks == 0 && queue_rx.is_empty() {
             break;
         }
 
         tokio::select! {
             // New path from queue
-            res = queue_rx.recv(), if active_tasks < max_concurrency && !wordlist_finished => {
+            res = queue_rx.recv(), if active_tasks < max_concurrency => {
                 match res {
                     Some(path) => {
                         active_tasks += 1;
@@ -216,7 +215,7 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
                         let path_clone = path.clone();
                         let sem = semaphore.clone();
                         let tx_clone = tx.clone();
-                        let master_tx_clone = master_tx_clone.clone();
+                        let master_tx_clone = master_tx.clone();
                         let done_tx_clone = done_tx.clone();
                         let visited_clone = visited.clone();
                         let args_auto = args.auto_threads;
@@ -279,7 +278,7 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
                         });
                     }
                     None => {
-                        wordlist_finished = true;
+                        // queue_rx closed (should not happen since we hold master_tx)
                     }
                 }
             }

@@ -3,7 +3,7 @@
 ISU SecOps Engine, Rust ile yazılmış yüksek performanslı bir dizin ve dosya keşif (bruteforce) aracıdır. Web sunucularındaki gizli yolları eşzamanlı ağ istekleri yardımıyla son derece hızlı bir şekilde bulmak için tasarlanmıştır.
 
 Kullanım kolaylığı sağlayan iki güçlü arayüz ile birlikte gelir:
-1. **Komut Satırı Arayüzü (CLI)**: Terminal tutkunları için, gerçek zamanlı hiyararşik (ağaç yapısında) sonuç görüntüleme desteği sunar.
+1. **Komut Satırı Arayüzü (CLI)**: Terminal tutkunları için, gerçek zamanlı hiyerarşik (ağaç yapısında) sonuç görüntüleme desteği sunar.
 2. **Modern Web Arayüzü**: Tamamen yerel (local) olarak çalışan, şık, karanlık temalı (dark mode) ve "glassmorphism" tasarım estetiğine sahip gelişmiş bir kontrol panelidir.
 
 ## ✨ Yeni Nesil Özellikler (v0.5.0)
@@ -40,7 +40,7 @@ cargo run --release -- web
 ```
 
 - Özel bir port belirlemek isterseniz: `cargo run --release -- web --port 3000`
-- Arayüzden **Smart Mode** togglle'larını açarak sistemin hızı ve yolları kendi seçmesini sağlayabilirsiniz.
+- Arayüzden **Smart Mode** seçeneklerini açarak sistemin hızı ve yolları kendi seçmesini sağlayabilirsiniz.
 
 ### 💻 Komut Satırı Arayüzü (CLI)
 
