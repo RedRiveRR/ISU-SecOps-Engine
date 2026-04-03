@@ -16,6 +16,8 @@ CLI yapısını, alt komutları ve bayrakları (flags) tanımlar. `clap` kütüp
 Projenin kalbi olan bu modül şu özelliklere sahiptir:
 - **Asenkron Çalışma**: Bloklamayan I/O için `tokio`, paralel istek yönetimi için `futures` kullanır.
 - **Olay Odaklı İletişim (Event-Driven)**: Çekirdek motor, sonuçları doğrudan ekrana basmak yerine `tokio::sync::mpsc` kanalları üzerinden `ScanEvent` mesajları yayınlar. Bu sayede sonuçlar aynı anda hem CLI hem de Web arayüzü tarafından canlı olarak işlenebilir.
+- **Deep Stealth Mode (Derin Gizlilik)**: WAF ve IPS sistemlerini atlatmak için otonom *Contextual Blending* (decoy requests) ve *Cooldown* (soğuma) mekanizmalarını yönetir.
+- **Rotating Proxy Pool**: Birden fazla proxy sunucusunu `Arc<Vec<reqwest::Client>>` yapısında yöneterek her istekte rastgele IP değişimi (rotation) yapar.
 - **URL Normalizasyonu**: Eksik protokolleri (http/https) tespit eder ve varsayılan olarak `https://` ekleyerek hataları önler.
 
 ### 4. `web.rs` (Web Arayüz Sunucusu)
