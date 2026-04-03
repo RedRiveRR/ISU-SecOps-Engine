@@ -30,6 +30,7 @@ pub struct ScanRequest {
     auto_wordlist: Option<bool>,
     auto_threads: Option<bool>,
     crawler: Option<bool>,
+    depth: Option<usize>,
 }
 
 #[derive(Serialize)]
@@ -77,6 +78,7 @@ async fn start_scan(
         auto_threads: payload.auto_threads.unwrap_or(false),
         show_logs: false,
         crawler: payload.crawler.unwrap_or(false),
+        depth: payload.depth.unwrap_or(1),
     };
 
     let (tx, rx) = mpsc::channel(5000);

@@ -62,6 +62,10 @@ pub struct DirbruteArgs {
     #[arg(long = "auto-threads")]
     pub auto_threads: bool,
 
+    /// Max recursion depth for directory discovery (0 = infinite, 1 = default)
+    #[arg(short = 'd', long = "depth", default_value_t = 1)]
+    pub depth: usize,
+
     /// Show real-time scan logs in terminal
     #[arg(short = 'l', long = "show-logs")]
     pub show_logs: bool,

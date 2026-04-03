@@ -188,18 +188,19 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
     let waf_warned = Arc::new(std::sync::atomic::AtomicBool::new(false));
 
     let visited = Arc::new(Mutex::new(HashSet::new()));
-    let (master_tx, mut queue_rx) = mpsc::channel::<String>(10000); // Path queue
+    let (master_tx, mut queue_rx) = mpsc::channel::<(String, usize)>(10000); // Path queue
     let (done_tx, mut done_rx) = mpsc::channel::<(Option<ScanResult>, String)>(10000); // Task completion
     let mut results_vec = Vec::new();
     let mut active_tasks = 0;
 
     // Load initial paths
+    let paths_arc = Arc::new(paths);
     {
         let mut v = visited.lock().await;
-        for path in paths {
+        for path in paths_arc.iter() {
             let normalized = path.trim_start_matches('/').to_string();
             if !normalized.is_empty() && v.insert(normalized.clone()) {
-                let _ = master_tx.send(normalized).await;
+                let _ = master_tx.send((normalized, 1)).await;
             }
         }
     }
@@ -218,7 +219,7 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
             // New path from queue
             res = queue_rx.recv(), if active_tasks < max_concurrency => {
                 match res {
-                    Some(path) => {
+                    Some((path, depth)) => {
                         active_tasks += 1;
                         let client = client.clone();
                         let base_url_clone = base_url.clone();
@@ -233,6 +234,8 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
                         let limit = current_limit.clone();
                         let waf_error_count = waf_error_count.clone();
                         let waf_warned = waf_warned.clone();
+                        let paths_arc_clone = paths_arc.clone();
+                        let max_depth = args.depth;
 
                         tokio::spawn(async move {
                             let _permit = sem.acquire().await.unwrap();
@@ -308,6 +311,18 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
                                     let _ = tx_clone.send(ScanEvent::Found { result: sr.clone() }).await;
                                     found_result = Some(sr);
 
+                                    // Recursion logic
+                                    if depth < max_depth && !path_clone.contains('.') {
+                                        let mut v = visited_clone.lock().await;
+                                        for word in paths_arc_clone.iter() {
+                                            let word_trim = word.trim_start_matches('/');
+                                            let new_path = format!("{}/{}", path_clone.trim_end_matches('/'), word_trim);
+                                            if !new_path.is_empty() && v.insert(new_path.clone()) {
+                                                let _ = master_tx_clone.send((new_path, depth + 1)).await;
+                                            }
+                                        }
+                                    }
+
                                     // Crawler logic
                                     if args_crawl && !body_text.is_empty() && (status.is_success() || matches!(status.as_u16(), 401 | 403)) {
                                         let links = extract_links(&body_text);
@@ -319,7 +334,7 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
                                                         path: normalized.clone(), 
                                                         source: path_clone.clone() 
                                                     }).await;
-                                                    let _ = master_tx_clone.send(normalized).await;
+                                                    let _ = master_tx_clone.send((normalized, depth)).await;
                                                 }
                                             }
                                         }

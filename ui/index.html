@@ -353,6 +353,16 @@
                 </label>
             </div>
 
+            <div class="form-group">
+                <label for="max_depth">Max Recursion Depth</label>
+                <select id="max_depth" style="width: 100%; padding: 12px 16px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--card-border); border-radius: 8px; color: #fff; font-size: 14px;">
+                    <option value="1">1 (Base Level Only)</option>
+                    <option value="2" selected>2 (One Level Deep)</option>
+                    <option value="3">3 (Two Levels Deep)</option>
+                    <option value="4">4 (Three Levels Deep)</option>
+                </select>
+            </div>
+
             <button class="btn-launch" id="btn_scan" onclick="startScan()">Launch Scan</button>
 
             <div class="progress-container" id="progress_indicator">
@@ -445,6 +455,7 @@
             const auto_wordlist = document.getElementById('auto_wordlist').checked;
             const auto_threads = document.getElementById('auto_threads').checked;
             const crawler = document.getElementById('crawler_enabled').checked;
+            const depth = parseInt(document.getElementById('max_depth').value);
 
             if (!url || (!wordlist && !auto_wordlist)) {
                 alert("Please fill in target URL and wordlist (or enable Smart Wordlist).");
@@ -490,7 +501,8 @@
                         threads,
                         auto_wordlist,
                         auto_threads,
-                        crawler
+                        crawler,
+                        depth
                     })
                 });
 
