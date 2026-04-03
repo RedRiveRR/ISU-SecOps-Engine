@@ -1,0 +1,17 @@
+admin
+login
+dashboard
+api
+static
+images
+assets
+public
+private
+secret
+wp-admin
+index.html
+config.php
+robots.txt
+.env
+.git
+.gitignore
