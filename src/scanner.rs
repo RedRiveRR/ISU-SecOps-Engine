@@ -9,7 +9,6 @@ use serde::Serialize;
 use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::fs::OpenOptions;
-use std::io::Write;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
