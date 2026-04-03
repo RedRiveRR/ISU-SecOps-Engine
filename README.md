@@ -1,4 +1,4 @@
-# ISU SecOps Engine (v0.4.2)
+# ISU SecOps Engine (v0.5.0)
 
 ISU SecOps Engine, Rust ile yazılmış yüksek performanslı bir dizin ve dosya keşif (bruteforce) aracıdır. Web sunucularındaki gizli yolları eşzamanlı ağ istekleri yardımıyla son derece hızlı bir şekilde bulmak için tasarlanmıştır.
 
@@ -6,13 +6,14 @@ Kullanım kolaylığı sağlayan iki güçlü arayüz ile birlikte gelir:
 1. **Komut Satırı Arayüzü (CLI)**: Terminal tutkunları için, gerçek zamanlı hiyararşik (ağaç yapısında) sonuç görüntüleme desteği sunar.
 2. **Modern Web Arayüzü**: Tamamen yerel (local) olarak çalışan, şık, karanlık temalı (dark mode) ve "glassmorphism" tasarım estetiğine sahip gelişmiş bir kontrol panelidir.
 
-## ✨ Yeni Nesil Özellikler (v0.4.1)
+## ✨ Yeni Nesil Özellikler (v0.5.0)
 
 - **Akıllı Mod (Smart Mode)**: Dosya seçmekle uğraşmayın. Sistem, en yaygın kullanılan dizin ve dosyaları (admin, backup, .env vb.) otomatik olarak tarar.
 - **Adaptif İş Parçacığı (Adaptive Threading)**: Hedef sunucunun hızına göre otomatik vites artırır. Sunucu yavaşladığında veya hata verdiğinde sistem hızı düşürür, rahatladığında ise maksimum hıza çıkar.
 - **Işık Hızında**: Maksimum istek hızı için tamamen asenkron Rust (`tokio` ve `reqwest`) altyapısı üzerine inşa edilmiştir.
 - **Çift Arayüz (Dual Interface)**: Node.js gibi harici hiçbir sistem gereksinimi duymadan her iki arayüzü de kullanabilirsiniz.
 - **Gerçek Zamanlı Veri Akışı (SSE)**: Web arayüzü, arka planda tarama sürerken yeni keşfedilen adresleri ve güncel tarama hızını anında ekrana yansıtır.
+- **HTML Crawler**: Sayfa içerisindeki tüm dahili bağlantıları anlık olarak ayrıştırır ve otomatik olarak tarama kuyruğuna ekler. Dizin bruteforce ile ulaşılamayan yolları dinamik olarak keşfeder.
 
 ## Kurulum
 
@@ -46,7 +47,7 @@ cargo run --release -- web
 **Temel Akıllı Tarama (Önerilen):**
 Sistemin wordlist'i ve hızı otomatik ayarlaması için:
 ```bash
-cargo run --release -- pentest dirbrute "http://example.com" --auto-wordlist --auto-threads
+cargo run --release -- pentest dirbrute "http://example.com" --auto-wordlist --auto-threads --crawler
 ```
 
 **Gelişmiş Manuel Kullanım:**
@@ -64,6 +65,7 @@ cargo run --release -- pentest dirbrute "http://example.com" --wordlist common.t
 | `--threads` | `-t` | Eşzamanlı istek sayısı (Varsayılan: 10) |
 | `--header` | `-H` | İsteğe eklenecek özel HTTP Başlığı |
 | `--cookie` | `-c` | İsteğe eklenecek özel HTTP Çerezi |
+| `--crawler` | `-C` | HTML Crawler motorunu aktifleştirir |
 
 ## Dokümantasyon
 

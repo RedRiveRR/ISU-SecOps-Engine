@@ -37,7 +37,7 @@ struct TreeNode {
 }
 
 pub async fn run_dirbrute(args: DirbruteArgs) {
-    let (tx, mut rx) = mpsc::channel(100);
+    let (tx, mut rx) = mpsc::channel(5000);
     
     let args_clone = args.clone();
     let scan_handle = tokio::spawn(async move {
@@ -182,6 +182,7 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
     let (done_tx, mut done_rx) = mpsc::channel::<(Option<ScanResult>, String)>(10000); // Task completion
     let mut results_vec = Vec::new();
     let mut active_tasks = 0;
+    let mut wordlist_finished = false;
 
     // Load initial paths
     {
@@ -194,89 +195,99 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
         }
     }
     
+    // Drop the master_tx so that queue_rx.recv() returns None when all clones are gone.
+    drop(master_tx);
+    
     // Main processing loop
     loop {
+        // Exit condition: no active tasks AND queue is empty/closed
+        if active_tasks == 0 && (wordlist_finished || queue_rx.is_empty()) {
+            break;
+        }
+
         tokio::select! {
             // New path from queue
-            Some(path) = queue_rx.recv(), if active_tasks < max_concurrency => {
-                active_tasks += 1;
-                let client = client.clone();
-                let base_url_clone = base_url.clone();
-                let path_clone = path.clone();
-                let sem = semaphore.clone();
-                let tx_clone = tx.clone();
-                let master_tx_clone = master_tx.clone();
-                let done_tx_clone = done_tx.clone();
-                let visited_clone = visited.clone();
-                let args_auto = args.auto_threads;
-                let args_crawl = args.crawler;
-                let limit = current_limit.clone();
+            res = queue_rx.recv(), if active_tasks < max_concurrency && !wordlist_finished => {
+                match res {
+                    Some(path) => {
+                        active_tasks += 1;
+                        let client = client.clone();
+                        let base_url_clone = base_url.clone();
+                        let path_clone = path.clone();
+                        let sem = semaphore.clone();
+                        let tx_clone = tx.clone();
+                        let master_tx_clone = master_tx_clone.clone();
+                        let done_tx_clone = done_tx.clone();
+                        let visited_clone = visited.clone();
+                        let args_auto = args.auto_threads;
+                        let args_crawl = args.crawler;
+                        let limit = current_limit.clone();
 
-                tokio::spawn(async move {
-                    let _permit = sem.acquire().await.unwrap();
-                    let start = std::time::Instant::now();
-                    let url = format!("{}/{}", base_url_clone, path_clone);
-                    let res = client.get(&url).send().await;
-                    let elapsed = start.elapsed();
+                        tokio::spawn(async move {
+                            let _permit = sem.acquire().await.unwrap();
+                            let start = std::time::Instant::now();
+                            let url = format!("{}/{}", base_url_clone, path_clone);
+                            let res = client.get(&url).send().await;
+                            let elapsed = start.elapsed();
 
-                    let mut found_result = None;
+                            let mut found_result = None;
 
-                    if let Ok(response) = res {
-                        let status = response.status();
-                        
-                        if args_auto {
-                            adjust_concurrency(status, elapsed, &limit, &sem, &tx_clone).await;
-                        }
+                            if let Ok(response) = res {
+                                let status = response.status();
+                                
+                                if args_auto {
+                                    adjust_concurrency(status, elapsed, &limit, &sem, &tx_clone).await;
+                                }
 
-                        let interesting = is_interesting_status(status);
-                        
-                        let _ = tx_clone.send(ScanEvent::Attempt { 
-                            path: path_clone.clone(), 
-                            status: status.as_u16(),
-                            is_interesting: interesting
-                        }).await;
+                                let interesting = is_interesting_status(status);
+                                
+                                let _ = tx_clone.send(ScanEvent::Attempt { 
+                                    path: path_clone.clone(), 
+                                    status: status.as_u16(),
+                                    is_interesting: interesting
+                                }).await;
 
-                        if interesting {
-                            let sr = ScanResult {
-                                path: path_clone.clone(),
-                                status: status.as_u16(),
-                            };
-                            let _ = tx_clone.send(ScanEvent::Found { result: sr.clone() }).await;
-                            found_result = Some(sr);
+                                if interesting {
+                                    let sr = ScanResult {
+                                        path: path_clone.clone(),
+                                        status: status.as_u16(),
+                                    };
+                                    let _ = tx_clone.send(ScanEvent::Found { result: sr.clone() }).await;
+                                    found_result = Some(sr);
 
-                            // Crawler logic
-                            if args_crawl && status.is_success() {
-                                if let Ok(body) = response.text().await {
-                                    let links = extract_links(&body);
-                                    let mut v = visited_clone.lock().await;
-                                    for link in links {
-                                        if let Some(normalized) = normalize_path(&link, &base_url_clone) {
-                                            if v.insert(normalized.clone()) {
-                                                let _ = tx_clone.send(ScanEvent::CrawlFound { 
-                                                    path: normalized.clone(), 
-                                                    source: path_clone.clone() 
-                                                }).await;
-                                                let _ = master_tx_clone.send(normalized).await;
+                                    // Crawler logic
+                                    if args_crawl && (status.is_success() || matches!(status.as_u16(), 401 | 403)) {
+                                        if let Ok(body) = response.text().await {
+                                            let links = extract_links(&body);
+                                            let mut v = visited_clone.lock().await;
+                                            for link in links {
+                                                if let Some(normalized) = normalize_path(&link, &base_url_clone) {
+                                                    if v.insert(normalized.clone()) {
+                                                        let _ = tx_clone.send(ScanEvent::CrawlFound { 
+                                                            path: normalized.clone(), 
+                                                            source: path_clone.clone() 
+                                                        }).await;
+                                                        let _ = master_tx_clone.send(normalized).await;
+                                                    }
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
-                        }
+                            let _ = done_tx_clone.send((found_result, path_clone)).await;
+                        });
                     }
-                    let _ = done_tx_clone.send((found_result, path_clone)).await;
-                });
+                    None => {
+                        wordlist_finished = true;
+                    }
+                }
             }
             // A task finished
             Some((res, _path)) = done_rx.recv() => {
                 active_tasks -= 1;
                 if let Some(sr) = res {
                     results_vec.push(sr);
-                }
-                
-                // End check
-                if active_tasks == 0 && queue_rx.is_empty() {
-                    break;
                 }
             }
         }

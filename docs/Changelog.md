@@ -2,6 +2,19 @@
 
 ISU SecOps Engine projesindeki tüm önemli değişiklikler bu dosyada kayıt altına alınacaktır.
 
+## [v0.5.0] - 2026-04-03
+### Eklendi
+- **Dahili HTML Crawler**:
+    - `nipper` kütüphanesi kullanılarak yüksek performanslı asenkron HTML ayrıştırma motoru entegre edildi.
+    - Tarama sırasında bulunan tüm dahili bağlantıları otomatik olarak kuyruğa ekleyen dinamik kanal yapısı (`mpsc`) kuruldu.
+    - Tekrarlı taramaları önlemek için `visited` cache mekanizması (HashSet) eklendi.
+- **Web UI Geliştirmesi**:
+    - Keşfedilen bağlantıları anlık olarak izlemek için "Crawler" sekmesi eklendi.
+    - Tarama yapılandırmasına "Enable HTML Crawler" seçeneği eklendi.
+- **CLI Güncellemesi**:
+    - Crawler modunu aktifleştirmek için `--crawler` (`-C`) bayrağı eklendi.
+- Proje sürümü `v0.5.0` olarak yükseltildi.
+
 ## [v0.4.0] - 2026-04-03
 ### Eklendi
 - **Görünüm Ayrıştırma (UI/UX)**:

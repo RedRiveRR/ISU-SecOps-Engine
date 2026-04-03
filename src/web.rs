@@ -79,7 +79,7 @@ async fn start_scan(
         crawler: payload.crawler.unwrap_or(false),
     };
 
-    let (tx, rx) = mpsc::channel(100);
+    let (tx, rx) = mpsc::channel(5000);
 
     // Spawn scanner in background
     tokio::spawn(async move {
