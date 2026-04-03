@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -32,7 +33,7 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            background-image: 
+            background-image:
                 radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.15), transparent 25%),
                 radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.1), transparent 25%);
             background-attachment: fixed;
@@ -120,7 +121,7 @@
             letter-spacing: 0.5px;
         }
 
-        input {
+        input, select {
             width: 100%;
             padding: 12px 16px;
             background: rgba(0, 0, 0, 0.2);
@@ -131,7 +132,7 @@
             transition: all 0.2s;
         }
 
-        input:focus {
+        input:focus, select:focus {
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
@@ -155,34 +156,9 @@
             transform: translateY(-1px);
         }
 
-        .btn-launch:active {
-            transform: translateY(1px);
-        }
-
-        .btn-stop {
-            background: var(--danger) !important;
-        }
-
         .results-panel {
             height: calc(100vh - 180px);
-            overflow: hidden; /* Individual tabs will scroll */
-        }
-
-        .results-panel::-webkit-scrollbar {
-            width: 8px;
-        }
-        .results-panel::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .results-panel::-webkit-scrollbar-thumb {
-            background: var(--card-border);
-            border-radius: 4px;
-        }
-
-        .tree-view {
-            font-family: 'JetBrains Mono', 'Fira Code', monospace;
-            font-size: 14px;
-            line-height: 1.6;
+            overflow: hidden;
         }
 
         .status-badge {
@@ -201,7 +177,7 @@
         .status-500 { background: darkred; }
 
         .log-line {
-            padding: 8px;
+            padding: 10px 12px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.03);
             display: flex;
             align-items: center;
@@ -230,11 +206,8 @@
             animation: spin 1s infinite linear;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Tabs Styling */
         .tabs {
             display: flex;
             gap: 4px;
@@ -265,28 +238,13 @@
             display: none;
             flex: 1;
             overflow-y: auto;
-            padding-right: 10px;
         }
 
-        .tab-content.active {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .tab-content::-webkit-scrollbar {
-            width: 6px;
-        }
-        .tab-content::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .tab-content::-webkit-scrollbar-thumb {
-            background: var(--card-border);
-            border-radius: 3px;
-        }
+        .tab-content.active { display: flex; flex-direction: column; }
 
         .log-entry {
             font-size: 12px;
-            padding: 4px 8px;
+            padding: 6px 10px;
             border-left: 2px solid transparent;
             margin-bottom: 2px;
             white-space: nowrap;
@@ -298,29 +256,80 @@
             border-left-color: var(--success);
             background: rgba(16, 185, 129, 0.05);
         }
+
+        #tech_badges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+            min-height: 28px;
+        }
+
+        .tech-badge {
+            background: rgba(139, 92, 246, 0.2);
+            color: #c4b5fd;
+            border: 1px solid rgba(139, 92, 246, 0.4);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            animation: fadeIn 0.4s ease-out;
+            box-shadow: 0 2px 10px rgba(139, 92, 246, 0.1);
+        }
+
+        #waf_warning {
+            display: none;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3);
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease-out;
+            backdrop-filter: blur(8px);
+        }
+        
+        #soft404_status {
+            display: none;
+            background: rgba(6, 182, 212, 0.1);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            color: #22d3ee;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            margin-bottom: 12px;
+            align-items: center;
+            gap: 8px;
+        }
     </style>
 </head>
+
 <body>
-    <div id="waf_warning" style="display: none; background: rgba(239, 68, 68, 0.9); color: white; padding: 16px 24px; border-radius: 8px; font-weight: 600; align-items: center; gap: 12px; box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3); position: fixed; top: 24px; left: 50%; transform: translateX(-50%); z-index: 1000; animation: fadeIn 0.3s ease-out;">
+    <div id="waf_warning">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-        <span id="waf_warning_text">Sunucuda WAF tespit edildi!</span>
-        <button onclick="document.getElementById('waf_warning').style.display='none'" style="background: none; border: none; color: white; cursor: pointer; margin-left: 24px;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
+        <span id="waf_warning_text">WAF detected!</span>
+        <button onclick="document.getElementById('waf_warning').style.display='none'" style="background:none; border:none; color:white; cursor:pointer; margin-left:20px;">×</button>
     </div>
 
     <header>
         <div class="brand-title">ISU <span>SecOps</span> Engine</div>
         <div style="display: flex; align-items: center; gap: 12px;">
             <div id="connection_status" style="font-size: 10px; color: var(--danger); background: rgba(239, 68, 68, 0.1); padding: 2px 8px; border-radius: 10px;">OFFLINE</div>
-            <div style="font-size: 13px; color: var(--text-muted);">v0.6.0 &middot; Dirbrute Web</div>
+            <div style="font-size: 13px; color: var(--text-muted);">v0.7.0 &middot; Dirbrute Web</div>
         </div>
     </header>
 
     <main>
         <div class="panel">
             <h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> Scan Configuration</h2>
-            
+
             <div class="form-group">
                 <label for="target_url">Target URL</label>
                 <input type="url" id="target_url" placeholder="http://example.com" required value="http://localhost:8000">
@@ -328,38 +337,32 @@
 
             <div class="form-group">
                 <label for="wordlist_path">Wordlist Path</label>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <input type="text" id="wordlist_path" placeholder="common.txt" value="common.txt" style="flex: 1;">
-                </div>
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none; font-size: 12px; margin-top: 4px;">
-                    <input type="checkbox" id="auto_wordlist" style="width: auto;" onchange="toggleInputs()"> 
-                    <span>Smart Mode (Auto Wordlist)</span>
+                <input type="text" id="wordlist_path" placeholder="common.txt" value="common.txt">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none; margin-top: 4px;">
+                    <input type="checkbox" id="auto_wordlist" style="width:auto;" onchange="toggleInputs()"> <span>Smart Mode (Auto)</span>
                 </label>
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none; font-size: 12px; margin-top: 4px;">
-                    <input type="checkbox" id="crawler_enabled" style="width: auto;"> 
-                    <span>Enable HTML Crawler</span>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none;">
+                    <input type="checkbox" id="crawler_enabled" style="width:auto;"> <span>Enable HTML Crawler</span>
                 </label>
             </div>
 
             <div class="form-group">
                 <div style="display: flex; justify-content: space-between;">
                     <label for="threads">Threads</label>
-                    <span id="concurrency_val" style="font-size: 12px; color: var(--primary); font-weight: bold; display: none;">Speed: 5x</span>
+                    <span id="concurrency_val" style="font-size: 11px; color: var(--primary); display: none;">Speed: 5x</span>
                 </div>
                 <input type="number" id="threads" value="10" min="1" max="100">
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none; font-size: 12px; margin-top: 4px;">
-                    <input type="checkbox" id="auto_threads" style="width: auto;" onchange="toggleInputs()"> 
-                    <span>Adaptive Threading (Auto Speed)</span>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none; margin-top: 4px;">
+                    <input type="checkbox" id="auto_threads" style="width:auto;" onchange="toggleInputs()"> <span>Adaptive Threading</span>
                 </label>
             </div>
 
             <div class="form-group">
                 <label for="max_depth">Max Recursion Depth</label>
-                <select id="max_depth" style="width: 100%; padding: 12px 16px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--card-border); border-radius: 8px; color: #fff; font-size: 14px;">
-                    <option value="1">1 (Base Level Only)</option>
+                <select id="max_depth">
+                    <option value="1">1 (Base Level)</option>
                     <option value="2" selected>2 (One Level Deep)</option>
                     <option value="3">3 (Two Levels Deep)</option>
-                    <option value="4">4 (Three Levels Deep)</option>
                 </select>
             </div>
 
@@ -371,37 +374,27 @@
             </div>
         </div>
 
-        <div class="panel results-panel" style="display: flex; flex-direction: column;">
+        <div class="panel results-panel">
+            <div id="tech_badges"></div>
+            <div id="soft404_status">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span id="soft404_text">Heuristic Protection Active</span>
+            </div>
+
             <div class="tabs">
-                <div class="tab active" onclick="switchTab('results')" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    Bulunan Sonuçlar <span id="found_count_badge" style="background: var(--success); color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px; display: none;">0</span>
-                </div>
-                <div class="tab" onclick="switchTab('logs')">Canlı Loglar</div>
+                <div class="tab active" onclick="switchTab('results')">Findings</div>
+                <div class="tab" onclick="switchTab('logs')">Live Logs</div>
                 <div class="tab" onclick="switchTab('crawler')">Crawler</div>
             </div>
 
             <div id="results_tab" class="tab-content active">
-                <div class="tree-view" id="results_container">
-                    <div style="text-align: center; color: var(--text-muted); margin-top: 40px; font-style: italic;">
-                        Bulunan gizli klasörler burada hiyerarşik olarak listelenecektir.
-                    </div>
-                </div>
+                <div id="results_container"></div>
             </div>
-
             <div id="logs_tab" class="tab-content">
-                <div class="tree-view" id="logs_container">
-                    <div style="text-align: center; color: var(--text-muted); margin-top: 40px; font-style: italic;">
-                        Anlık tarama logları burada görüntülenecektir.
-                    </div>
-                </div>
+                <div id="logs_container"></div>
             </div>
-
             <div id="crawler_tab" class="tab-content">
-                <div class="tree-view" id="crawler_container">
-                    <div style="text-align: center; color: var(--text-muted); margin-top: 40px; font-style: italic;">
-                        Crawler tarafından keşfedilen bağlantılar burada listelenecektir.
-                    </div>
-                </div>
+                <div id="crawler_container"></div>
             </div>
         </div>
     </main>
@@ -419,262 +412,110 @@
         function switchTab(tabName) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
-            if (tabName === 'results') {
-                document.querySelectorAll('.tab')[0].classList.add('active');
-                document.getElementById('results_tab').classList.add('active');
-            } else if (tabName === 'logs') {
-                document.querySelectorAll('.tab')[1].classList.add('active');
-                document.getElementById('logs_tab').classList.add('active');
-            } else if (tabName === 'crawler') {
-                document.querySelectorAll('.tab')[2].classList.add('active');
-                document.getElementById('crawler_tab').classList.add('active');
-            }
+            document.getElementById(`${tabName}_tab`).classList.add('active');
+            document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
         }
 
         function toggleInputs() {
             const autoW = document.getElementById('auto_wordlist').checked;
             const autoT = document.getElementById('auto_threads').checked;
-            
-            const wordlistInput = document.getElementById('wordlist_path');
-            const threadsInput = document.getElementById('threads');
-            
-            wordlistInput.disabled = autoW;
-            wordlistInput.style.opacity = autoW ? "0.4" : "1";
-            
-            threadsInput.disabled = autoT;
-            threadsInput.style.opacity = autoT ? "0.4" : "1";
-
+            document.getElementById('wordlist_path').disabled = autoW;
+            document.getElementById('wordlist_path').style.opacity = autoW ? "0.4" : "1";
+            document.getElementById('threads').disabled = autoT;
+            document.getElementById('threads').style.opacity = autoT ? "0.4" : "1";
             document.getElementById('concurrency_val').style.display = autoT ? "inline" : "none";
         }
 
         async function startScan() {
             let url = document.getElementById('target_url').value.trim();
-            const wordlist = document.getElementById('wordlist_path').value.trim();
-            const threads = parseInt(document.getElementById('threads').value);
-            const auto_wordlist = document.getElementById('auto_wordlist').checked;
-            const auto_threads = document.getElementById('auto_threads').checked;
-            const crawler = document.getElementById('crawler_enabled').checked;
-            const depth = parseInt(document.getElementById('max_depth').value);
+            const payload = {
+                url,
+                wordlist: document.getElementById('auto_wordlist').checked ? null : document.getElementById('wordlist_path').value.trim(),
+                threads: parseInt(document.getElementById('threads').value),
+                auto_wordlist: document.getElementById('auto_wordlist').checked,
+                auto_threads: document.getElementById('auto_threads').checked,
+                crawler: document.getElementById('crawler_enabled').checked,
+                depth: parseInt(document.getElementById('max_depth').value)
+            };
 
-            if (!url || (!wordlist && !auto_wordlist)) {
-                alert("Please fill in target URL and wordlist (or enable Smart Wordlist).");
-                return;
-            }
-
-            // Normalize URL: Ensure protocol is present
-            if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                const isLocal = url.startsWith('localhost') || url.startsWith('127.0.0.1') || /^\d{1,3}\./.test(url);
-                url = (isLocal ? 'http://' : 'https://') + url;
-                document.getElementById('target_url').value = url;
-            }
-
-            console.log("Starting scan for:", url);
-
-            // Reset UI
             document.getElementById('results_container').innerHTML = '';
             document.getElementById('logs_container').innerHTML = '';
             document.getElementById('crawler_container').innerHTML = '';
-            document.getElementById('found_count_badge').innerText = '0';
-            document.getElementById('found_count_badge').style.display = 'none';
+            document.getElementById('tech_badges').innerHTML = '';
+            document.getElementById('soft404_status').style.display = 'none';
+            document.getElementById('waf_warning').style.display = 'none';
             document.getElementById('btn_scan').disabled = true;
-            document.getElementById('btn_scan').style.opacity = '0.5';
             document.getElementById('progress_indicator').style.display = 'flex';
             document.getElementById('progress_text').innerText = 'Starting...';
-            
-            const startLog = document.createElement('div');
-            startLog.className = 'log-entry interesting';
-            startLog.innerHTML = `<span style="color: var(--success);">[*] Scan request sent for ${url}</span>`;
-            document.getElementById('logs_container').appendChild(startLog);
 
-            if (eventSource) {
-                eventSource.close();
-            }
+            if (eventSource) eventSource.close();
 
             try {
-                const response = await fetch('/api/scan', {
+                const resp = await fetch('/api/scan', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        url, 
-                        wordlist: auto_wordlist ? null : wordlist, 
-                        threads,
-                        auto_wordlist,
-                        auto_threads,
-                        crawler,
-                        depth
-                    })
+                    body: JSON.stringify(payload)
                 });
-
-                if (!response.ok) {
-                    throw new Error(await response.text());
-                }
-
-                const data = await response.json();
+                const data = await resp.json();
                 connectSSE(data.stream_id);
             } catch (err) {
-                alert("Error starting scan: " + err.message);
+                alert("Error: " + err.message);
                 scanFinished();
             }
         }
 
         function connectSSE(streamId) {
-            console.log("Connecting to SSE stream:", streamId);
-            const statusIndicator = document.getElementById('connection_status');
-            
             eventSource = new EventSource(`/api/scan/stream/${streamId}`);
-            let foundCount = 0;
-            
-            eventSource.onopen = () => {
-                console.log("SSE Stream Opened");
-                statusIndicator.innerText = "CONNECTED";
-                statusIndicator.style.color = "var(--success)";
-                statusIndicator.style.background = "rgba(16, 185, 129, 0.1)";
-            };
-
-            eventSource.onmessage = function(event) {
+            eventSource.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                console.log("SSE Event:", data.event, data);
-                
                 if (data.event === "Start") {
-                    const statusIndicator = document.getElementById('connection_status');
-                    statusIndicator.innerText = "CONNECTED";
-                    statusIndicator.style.color = "var(--success)";
-                    statusIndicator.style.background = "rgba(16, 185, 129, 0.1)";
+                    document.getElementById('connection_status').innerText = "CONNECTED";
+                    document.getElementById('connection_status').style.color = "var(--success)";
                     document.getElementById('progress_text').innerText = `Scanning ${data.total} paths...`;
-                } 
-                else if (data.event === "ConcurrencyUpdate") {
-                    document.getElementById('concurrency_val').innerText = `Speed: ${data.current}x`;
-                }
-                else if (data.event === "Attempt") {
-                    const logsContainer = document.getElementById('logs_container');
+                } else if (data.event === "Soft404") {
+                    document.getElementById('soft404_status').style.display = 'flex';
+                    document.getElementById('soft404_text').innerText = `Heuristic Protection Enabled (${data.length} bytes baseline)`;
+                } else if (data.event === "TechFound") {
+                    const container = document.getElementById('tech_badges');
+                    if (![...container.children].some(el => el.innerText === data.name)) {
+                        const b = document.createElement('div');
+                        b.className = 'tech-badge';
+                        b.innerText = data.name;
+                        container.appendChild(b);
+                    }
+                } else if (data.event === "WafWarning") {
+                    document.getElementById('waf_warning').style.display = 'flex';
+                    document.getElementById('waf_warning_text').innerText = data.message;
+                } else if (data.event === "Attempt") {
                     const el = document.createElement('div');
                     el.className = `log-entry ${data.is_interesting ? 'interesting' : ''}`;
-                    
-                    const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                    el.innerHTML = `
-                        <span style="color: var(--text-muted); font-size: 10px;">[${time}]</span>
-                        <span style="color: var(--primary); margin-left: 4px;">TRY</span> 
-                        <span style="margin-left: 4px;">/${data.path.replace(/^\//,'')}</span>
-                        <span style="float: right; font-weight: bold; color: ${data.is_interesting ? 'var(--success)' : 'var(--danger)'}">${data.status}</span>
-                    `;
-                    
-                    logsContainer.appendChild(el);
-                    
-                    // Limit logs to last 500 lines
-                    if (logsContainer.children.length > 500) {
-                        logsContainer.removeChild(logsContainer.firstChild);
-                    }
-
-                    // Auto-scroll logic for logs (if near bottom)
-                    const tab = document.getElementById('logs_tab');
-                    if (tab.scrollTop + tab.clientHeight >= tab.scrollHeight - 100) {
-                        tab.scrollTop = tab.scrollHeight;
-                    }
-                }
-                else if (data.event === "CrawlFound") {
-                    const logsContainer = document.getElementById('logs_container');
-                    const el = document.createElement('div');
-                    el.className = 'log-entry interesting';
-                    
-                    const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                    el.innerHTML = `
-                        <span style="color: var(--text-muted); font-size: 10px;">[${time}]</span>
-                        <span style="color: var(--success); margin-left: 4px;">CRAWL</span> 
-                        <span style="margin-left: 4px;">/${data.path}</span>
-                        <span style="float: right; color: var(--text-muted); font-size: 10px;">via /${data.source}</span>
-                    `;
-                    logsContainer.appendChild(el);
-
-                    // Add to crawler tab too
-                    const crawlerContainer = document.getElementById('crawler_container');
-                    const cEl = document.createElement('div');
-                    cEl.className = 'log-entry interesting';
-                    cEl.innerHTML = `
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <span style="color: var(--success); font-weight: bold;">[FOUND]</span> 
-                                <span style="margin-left: 8px;">/${data.path}</span>
-                            </div>
-                            <span style="color: var(--text-muted); font-size: 10px;">Source: /${data.source}</span>
-                        </div>
-                    `;
-                    crawlerContainer.appendChild(cEl);
-                    
-                    const tab = document.getElementById('logs_tab');
-                    if (tab.scrollTop + tab.clientHeight >= tab.scrollHeight - 100) {
-                        tab.scrollTop = tab.scrollHeight;
-                    }
-                }
-                else if (data.event === "Found") {
-                    foundCount++;
-                    const badge = document.getElementById('found_count_badge');
-                    badge.innerText = foundCount;
-                    badge.style.display = 'inline-block';
-                    
+                    el.innerHTML = `<span>TRY</span> <span style="margin-left:4px;">/${data.path}</span> <span style="float:right; font-weight:bold; color: ${data.is_interesting ? 'var(--success)' : 'var(--danger)'}">${data.status}</span>`;
+                    const container = document.getElementById('logs_container');
+                    container.appendChild(el);
+                    if (container.children.length > 300) container.removeChild(container.firstChild);
+                    document.getElementById('logs_tab').scrollTop = document.getElementById('logs_tab').scrollHeight;
+                } else if (data.event === "Found") {
                     const res = data.result;
                     const el = document.createElement('div');
                     el.className = 'log-line';
-                    
-                    let pathText = res.path.startsWith('/') ? res.path : '/' + res.path;
-                    
-                    let extraInfo = `<span style="color: var(--text-muted); font-size: 11px; margin-left: 8px;">(L: ${res.length})</span>`;
-                    if (res.title) {
-                        extraInfo += `<span style="color: var(--primary); font-size: 11px; margin-left: 8px; font-style: italic;">"${res.title}"</span>`;
-                    }
-                    
                     el.innerHTML = `
-                        <div style="display: flex; align-items: center; max-width: 80%; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
-                            <span style="color: #6366f1; margin-right: 8px;">></span> 
-                            <span>${pathText}</span>
-                            ${extraInfo}
+                        <div style="display:flex; flex-direction:column;">
+                            <span style="font-weight:600;">/${res.path}</span>
+                            <span style="font-size:10px; color:var(--text-muted);">Len: ${res.length} ${res.title ? '&middot; ' + res.title : ''}</span>
                         </div>
                         <span class="status-badge ${getStatusClass(res.status)}">${res.status}</span>
                     `;
                     document.getElementById('results_container').appendChild(el);
-                    
-                    // Auto-scroll results
-                    const tab = document.getElementById('results_tab');
-                    tab.scrollTop = tab.scrollHeight;
-                }
-                else if (data.event === "WafWarning") {
-                    const banner = document.getElementById('waf_warning');
-                    document.getElementById('waf_warning_text').innerText = data.message;
-                    banner.style.display = 'flex';
-                }
-                else if (data.event === "Error") {
-                    const el = document.createElement('div');
-                    el.className = 'log-line';
-                    el.style.color = 'var(--danger)';
-                    el.innerText = `[Error] ${data.message}`;
-                    document.getElementById('results_container').appendChild(el);
-                }
-                else if (data.event === "Finished") {
-                    console.log("Scan Finished:", data);
+                } else if (data.event === "Finished") {
                     document.getElementById('progress_text').innerText = `Completed. Found ${data.total_found}.`;
                     scanFinished(true);
                 }
-            };
-
-            eventSource.onerror = function(err) {
-                console.error("SSE Error:", err);
-                eventSource.close();
-                const statusIndicator = document.getElementById('connection_status');
-                statusIndicator.innerText = "OFFLINE";
-                statusIndicator.style.color = "var(--danger)";
-                statusIndicator.style.background = "rgba(239, 68, 68, 0.1)";
-                scanFinished();
             };
         }
 
         function scanFinished(success = false) {
             document.getElementById('btn_scan').disabled = false;
-            document.getElementById('btn_scan').style.opacity = '1';
-            const progress = document.getElementById('progress_indicator');
-            if (!success) progress.style.display = 'none';
-            else {
-                document.querySelector('.loader').style.display = 'none';
-            }
+            if (!success) document.getElementById('progress_indicator').style.display = 'none';
         }
     </script>
 </body>

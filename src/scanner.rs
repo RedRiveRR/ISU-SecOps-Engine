@@ -31,6 +31,8 @@ pub enum ScanEvent {
     Attempt { path: String, status: u16, is_interesting: bool },
     CrawlFound { path: String, source: String },
     WafWarning { message: String },
+    TechFound { name: String },
+    Soft404 { status: u16, length: u64 },
 }
 
 #[derive(Debug, Default)]
@@ -58,17 +60,12 @@ pub async fn run_dirbrute(args: DirbruteArgs) {
                 println!("{} Loaded {} paths from wordlist", "[*]".blue(), total);
             }
             ScanEvent::Found { result } => {
-                // In CLI, we might want to just collect them and print tree at end.
-                // Or print as we go. The old behavior was to just collect and print tree.
                 results.push(result);
             }
             ScanEvent::Error { message } => {
                 eprintln!("{} {}", "[!]".red(), message);
             }
             ScanEvent::ConcurrencyUpdate { current } => {
-                // CLI doesn't show dynamic speed as a progress bar, but we can print it
-                // Or just ignore it to avoid cluttering the tree.
-                // Let's print a subtle message.
                 println!("{} Concurrency adjusted to: {}", "[*]".blue(), current);
             }
             ScanEvent::Attempt { path, status, is_interesting } => {
@@ -84,6 +81,14 @@ pub async fn run_dirbrute(args: DirbruteArgs) {
             }
             ScanEvent::WafWarning { message } => {
                 println!("\n{} {}\n", "[!] WAF TESPİT EDİLDİ:".on_red().white().bold(), message.yellow().bold());
+            }
+            ScanEvent::TechFound { name } => {
+                if args.show_logs {
+                    println!("{} Teşhis Edilen Teknoloji: {}", "[🏷️]".magenta(), name.bold());
+                }
+            }
+            ScanEvent::Soft404 { status, length } => {
+                println!("{} Soft-404 Koruma Aktif. Baseline: {} ({} bytes)", "[🛡️]".cyan(), status, length);
             }
             ScanEvent::CrawlFound { path, source } => {
                 if args.show_logs {
@@ -140,32 +145,24 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
                     }
                 }
             }
-            Err(e) => {
+            Err(_) => {
                 if !args.auto_wordlist {
-                    let _ = tx.send(ScanEvent::Error { message: format!("Wordlist açılamadı: {}", e) }).await;
+                    let _ = tx.send(ScanEvent::Error { message: "Wordlist açılamadı".into() }).await;
                     return Ok(vec![]);
                 }
             }
         }
     }
 
-    // 2. Akıllı Wordlist (Statik) Ekle
     if args.auto_wordlist {
         paths.extend(get_static_patterns());
     }
 
-    // Çiftleri temizle
     paths.sort();
     paths.dedup();
 
-    if paths.is_empty() {
-        let _ = tx.send(ScanEvent::Error { message: "Tarama yapılamaz: Wordlist boş!".to_string() }).await;
-        return Ok(vec![]);
-    }
-    
     let total = paths.len();
-    
-    let url_input = args.url.trim();
+    let url_input = args.url.clone();
     let base_url = if url_input.starts_with("http://") || url_input.starts_with("https://") {
         url_input.trim_end_matches('/').to_string()
     } else {
@@ -180,7 +177,22 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
     let initial_concurrency = if args.auto_threads { 5 } else { args.threads };
     let max_concurrency = if args.auto_threads { 50 } else { args.threads };
     
-    println!("{} Tarama başlıyor. Hedef: {}, Yol sayısı: {}", "[*]".blue(), base_url, total);
+    // --- Soft-404 Calibration ---
+    let mut soft_404_baseline: Option<(u16, u64)> = None;
+    let random_path = "ISU-SecOps-Heuristic-404-Test";
+    if let Ok(resp) = client.get(format!("{}/{}", base_url, random_path)).send().await {
+        let s = resp.status().as_u16();
+        let l = if let Some(content_len) = resp.content_length() {
+            content_len
+        } else {
+            resp.text().await.unwrap_or_default().len() as u64
+        };
+        
+        if s == 200 || s == 301 || s == 302 {
+            soft_404_baseline = Some((s, l));
+            let _ = tx.send(ScanEvent::Soft404 { status: s, length: l }).await;
+        }
+    }
 
     let semaphore = Arc::new(tokio::sync::Semaphore::new(initial_concurrency));
     let current_limit = Arc::new(std::sync::atomic::AtomicUsize::new(initial_concurrency));
@@ -188,35 +200,30 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
     let waf_warned = Arc::new(std::sync::atomic::AtomicBool::new(false));
 
     let visited = Arc::new(Mutex::new(HashSet::new()));
-    let (master_tx, mut queue_rx) = mpsc::channel::<(String, usize)>(10000); // Path queue
-    let (done_tx, mut done_rx) = mpsc::channel::<(Option<ScanResult>, String)>(10000); // Task completion
+    let technologies_found = Arc::new(Mutex::new(HashSet::new()));
+    let (master_tx, mut queue_rx) = mpsc::channel::<(String, usize)>(10000);
+    let (done_tx, mut done_rx) = mpsc::channel::<(Option<ScanResult>, String)>(10000);
     let mut results_vec = Vec::new();
     let mut active_tasks = 0;
+    let soft_404_baseline_arc = Arc::new(soft_404_baseline);
 
-    // Load initial paths
     let paths_arc = Arc::new(paths);
     {
         let mut v = visited.lock().await;
         for path in paths_arc.iter() {
             let normalized = path.trim_start_matches('/').to_string();
             if !normalized.is_empty() && v.insert(normalized.clone()) {
-                let _ = master_tx.send((normalized, 1)).await;
+                let _ = master_tx.send((normalized, 0)).await;
             }
         }
     }
     
-    // We do NOT drop master_tx here so that queue_rx.recv() blocks when empty
-    // until active tasks complete. The loop will break when active_tasks == 0 && queue_rx.is_empty().
-    
-    // Main processing loop
     loop {
-        // Exit condition: no active tasks AND queue is empty
         if active_tasks == 0 && queue_rx.is_empty() {
             break;
         }
 
         tokio::select! {
-            // New path from queue
             res = queue_rx.recv(), if active_tasks < max_concurrency => {
                 match res {
                     Some((path, depth)) => {
@@ -229,13 +236,15 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
                         let master_tx_clone = master_tx.clone();
                         let done_tx_clone = done_tx.clone();
                         let visited_clone = visited.clone();
-                        let args_auto = args.auto_threads;
-                        let args_crawl = args.crawler;
                         let limit = current_limit.clone();
+                        let max_depth = args.depth;
+                        let technologies_found_clone = technologies_found.clone();
                         let waf_error_count = waf_error_count.clone();
                         let waf_warned = waf_warned.clone();
+                        let soft_404_baseline = soft_404_baseline_arc.clone();
+                        let args_crawl = args.crawler;
+                        let auto_threads = args.auto_threads;
                         let paths_arc_clone = paths_arc.clone();
-                        let max_depth = args.depth;
 
                         tokio::spawn(async move {
                             let _permit = sem.acquire().await.unwrap();
@@ -249,92 +258,110 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
                             if let Ok(response) = res {
                                 let status = response.status();
                                 
-                                // WAF Detection logic
                                 if status.as_u16() == 403 || status.as_u16() == 429 {
                                     let old = waf_error_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                                     if old == 9 && !waf_warned.swap(true, std::sync::atomic::Ordering::SeqCst) {
                                         let _ = tx_clone.send(ScanEvent::WafWarning { 
-                                            message: "Yüksek oranda 403/429 hatası! Sunucuda WAF (Web Application Firewall) bloklaması olabilir.".into() 
+                                            message: "Yüksek oranda 403/429 hatası! WAF tespit edildi.".into() 
                                         }).await;
                                     }
                                 } else if status.is_success() {
                                     waf_error_count.store(0, std::sync::atomic::Ordering::SeqCst);
                                 }
                                 
-                                if args_auto {
+                                if auto_threads {
                                     adjust_concurrency(status, elapsed, &limit, &sem, &tx_clone).await;
                                 }
 
                                 let interesting = is_interesting_status(status);
                                 
+                                if interesting {
+                                    let lower_path = path_clone.to_lowercase();
+                                    for (key, tech) in get_fingerprints() {
+                                        if lower_path.contains(key) {
+                                            let mut techs = technologies_found_clone.lock().await;
+                                            if techs.insert(tech.to_string()) {
+                                                let _ = tx_clone.send(ScanEvent::TechFound { name: tech.to_string() }).await;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                let mut is_truly_interesting = interesting;
+                                let content_type = response.headers().get(reqwest::header::CONTENT_TYPE)
+                                    .and_then(|v| v.to_str().ok())
+                                    .unwrap_or("")
+                                    .to_string();
+                                
+                                let mut length = response.content_length().unwrap_or(0);
+                                let mut title = None;
+                                let is_html = content_type.contains("text/html");
+                                
+                                let needs_body = is_html || length == 0;
+                                let body_text = if needs_body {
+                                    response.text().await.ok()
+                                } else { None };
+
+                                if let Some(ref text) = body_text {
+                                    if length == 0 { length = text.len() as u64; }
+                                    if is_html {
+                                        let doc = Document::from(text.as_str());
+                                        let t = doc.select("title").text().to_string();
+                                        if !t.trim().is_empty() {
+                                            title = Some(t.trim().to_string());
+                                        }
+                                    }
+                                }
+
+                                if is_truly_interesting {
+                                    if let Some((base_status, base_len)) = *soft_404_baseline {
+                                        if status.as_u16() == base_status && length == base_len {
+                                            is_truly_interesting = false;
+                                        }
+                                    }
+                                }
+
                                 let _ = tx_clone.send(ScanEvent::Attempt { 
                                     path: path_clone.clone(), 
                                     status: status.as_u16(),
-                                    is_interesting: interesting
+                                    is_interesting: is_truly_interesting
                                 }).await;
 
-                                if interesting {
-                                    let content_type = response.headers().get(reqwest::header::CONTENT_TYPE)
-                                        .and_then(|v| v.to_str().ok())
-                                        .unwrap_or("")
-                                        .to_string();
-                                    
-                                    let mut length = response.content_length().unwrap_or(0);
-                                    let mut title = None;
-                                    let mut body_text = String::new();
-
-                                    let is_html = content_type.contains("text/html");
-                                    let needs_body = is_html || args_crawl;
-
-                                    if needs_body {
-                                        if let Ok(b) = response.text().await {
-                                            if length == 0 {
-                                                length = b.len() as u64;
-                                            }
-                                            if is_html {
-                                                let doc = Document::from(b.as_str());
-                                                let t = doc.select("title").text().to_string();
-                                                if !t.trim().is_empty() {
-                                                    title = Some(t.trim().to_string());
-                                                }
-                                            }
-                                            body_text = b;
-                                        }
-                                    }
-
-                                    let sr = ScanResult {
-                                        path: path_clone.clone(),
+                                if is_truly_interesting {
+                                    let sr = ScanResult { 
+                                        path: path_clone.clone(), 
                                         status: status.as_u16(),
                                         length,
                                         title,
                                     };
-                                    let _ = tx_clone.send(ScanEvent::Found { result: sr.clone() }).await;
-                                    found_result = Some(sr);
-
-                                    // Recursion logic
+                                    found_result = Some(sr.clone());
+                                    let _ = tx_clone.send(ScanEvent::Found { result: sr }).await;
+                                    
+                                    // Recursive Discovery
                                     if depth < max_depth && !path_clone.contains('.') {
-                                        let mut v = visited_clone.lock().await;
-                                        for word in paths_arc_clone.iter() {
-                                            let word_trim = word.trim_start_matches('/');
-                                            let new_path = format!("{}/{}", path_clone.trim_end_matches('/'), word_trim);
-                                            if !new_path.is_empty() && v.insert(new_path.clone()) {
-                                                let _ = master_tx_clone.send((new_path, depth + 1)).await;
+                                        for p in paths_arc_clone.iter() {
+                                            let sub_path = format!("{}/{}", path_clone.trim_end_matches('/'), p.trim_start_matches('/'));
+                                            let mut v = visited_clone.lock().await;
+                                            if v.insert(sub_path.clone()) {
+                                                let _ = master_tx_clone.send((sub_path, depth + 1)).await;
                                             }
                                         }
                                     }
 
-                                    // Crawler logic
-                                    if args_crawl && !body_text.is_empty() && (status.is_success() || matches!(status.as_u16(), 401 | 403)) {
-                                        let links = extract_links(&body_text);
-                                        let mut v = visited_clone.lock().await;
-                                        for link in links {
-                                            if let Some(normalized) = normalize_path(&link, &base_url_clone) {
-                                                if v.insert(normalized.clone()) {
-                                                    let _ = tx_clone.send(ScanEvent::CrawlFound { 
-                                                        path: normalized.clone(), 
-                                                        source: path_clone.clone() 
-                                                    }).await;
-                                                    let _ = master_tx_clone.send((normalized, depth)).await;
+                                    // Crawler
+                                    if args_crawl && depth < max_depth {
+                                        if let Some(body) = body_text {
+                                            let links = extract_links(&body);
+                                            let mut v = visited_clone.lock().await;
+                                            for link in links {
+                                                if let Some(normalized) = normalize_path(&link, &base_url_clone) {
+                                                    if v.insert(normalized.clone()) {
+                                                        let _ = tx_clone.send(ScanEvent::CrawlFound { 
+                                                            path: normalized.clone(), 
+                                                            source: path_clone.clone() 
+                                                        }).await;
+                                                        let _ = master_tx_clone.send((normalized, depth + 1)).await;
+                                                    }
                                                 }
                                             }
                                         }
@@ -344,12 +371,9 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
                             let _ = done_tx_clone.send((found_result, path_clone)).await;
                         });
                     }
-                    None => {
-                        // queue_rx closed (should not happen since we hold master_tx)
-                    }
+                    None => {}
                 }
             }
-            // A task finished
             Some((res, _path)) = done_rx.recv() => {
                 active_tasks -= 1;
                 if let Some(sr) = res {
@@ -374,43 +398,39 @@ async fn adjust_concurrency(
     let mut new_limit = current;
 
     if status.as_u16() == 429 || status.is_server_error() || elapsed.as_millis() > 1000 {
-        // Slow down
-        if current > 2 {
-            new_limit = current - 1;
-        }
+        if current > 2 { new_limit = current - 1; }
     } else if status.is_success() && elapsed.as_millis() < 300 {
-        // Speed up
-        if current < 50 {
-            new_limit = current + 1;
-        }
+        if current < 50 { new_limit = current + 1; }
     }
 
     if new_limit != current {
         limit.store(new_limit, std::sync::atomic::Ordering::SeqCst);
-        // Sync semaphore permits
-        if new_limit > current {
-            sem.add_permits(new_limit - current);
-        } else {
-            // Note: Semaphore doesn't support "reducing" permits easily without acquisition.
-            // For simplicity in this demo, we just add if increasing. 
-            // Total permits will just drift or we'd need a more complex scheduler.
-            // But for this task, let's just emit the event for UI.
-        }
+        if new_limit > current { sem.add_permits(new_limit - current); }
         let _ = tx.send(ScanEvent::ConcurrencyUpdate { current: new_limit }).await;
     }
 }
 
 fn get_static_patterns() -> Vec<String> {
     vec![
-        "admin".to_string(), "administrator".to_string(), "login".to_string(),
-        "api".to_string(), "v1".to_string(), "v2".to_string(), "v3".to_string(),
-        "config".to_string(), "setup".to_string(), "install".to_string(),
-        "backup".to_string(), "backups".to_string(), "old".to_string(), "new".to_string(),
-        "dev".to_string(), "development".to_string(), "staging".to_string(), "test".to_string(),
-        ".env".to_string(), ".git".to_string(), ".gitignore".to_string(), "docker-compose.yml".to_string(),
-        "server-status".to_string(), "phpinfo.php".to_string(), "database.sql".to_string(),
-        "wp-admin".to_string(), "wp-content".to_string(), "wp-includes".to_string(),
-        "node_modules".to_string(), "package.json".to_string(), "public".to_string(), "private".to_string(),
+        "admin".into(), "administrator".into(), "login".into(),
+        "api".into(), "v1".into(), "v2".into(), "v3".into(),
+        "config".into(), "setup".into(), "install".into(),
+        "backup".into(), "backups".into(), "old".into(), "new".into(),
+        "dev".into(), "development".into(), "staging".into(), "test".into(),
+        ".env".into(), ".git".into(), ".gitignore".into(), "docker-compose.yml".into(),
+        "server-status".into(), "phpinfo.php".into(), "database.sql".into(),
+        "wp-admin".into(), "wp-content".into(), "wp-includes".into(),
+        "node_modules".into(), "package.json".into(), "public".into(), "private".into(),
+    ]
+}
+
+fn get_fingerprints() -> Vec<(&'static str, &'static str)> {
+    vec![
+        ("wp-admin", "WordPress"), ("wp-content", "WordPress"), ("wp-includes", "WordPress"),
+        ("node_modules", "Node.js"), ("package.json", "Node.js"),
+        ("composer.json", "PHP"), ("phpinfo.php", "PHP"),
+        (".env", "Environment Variables"), ("web.config", "IIS / ASP.NET"),
+        ("docker-compose.yml", "Docker"), ("database.sql", "SQL Database Dump"),
     ]
 }
 
@@ -421,11 +441,9 @@ fn is_interesting_status(status: StatusCode) -> bool {
 
 fn build_tree(results: &[ScanResult]) -> TreeNode {
     let mut root = TreeNode::default();
-    
     for res in results {
         let mut current = &mut root;
         let parts: Vec<&str> = res.path.trim_matches('/').split('/').filter(|s| !s.is_empty()).collect();
-        
         for (i, part) in parts.iter().enumerate() {
             let is_last = i == parts.len() - 1;
             current = current.children.entry(part.to_string()).or_insert_with(TreeNode::default);
@@ -441,16 +459,8 @@ fn build_tree(results: &[ScanResult]) -> TreeNode {
 
 fn print_real_tree(base_url: &str, results: &[ScanResult]) {
     let root_node = build_tree(results);
-    
     fn format_node(name: &str, node: &TreeNode, prefix: &str, is_last: bool) {
-        let marker = if prefix.is_empty() {
-            ""
-        } else if is_last {
-            "└── "
-        } else {
-            "├── "
-        };
-
+        let marker = if prefix.is_empty() { "" } else if is_last { "└── " } else { "├── " };
         let mut text = format!("{}{}{}", prefix, marker, name);
         if let Some(status) = node.status {
             let code_str = format!("{}", status);
@@ -463,83 +473,42 @@ fn print_real_tree(base_url: &str, results: &[ScanResult]) {
             };
             text.push_str(&format!(" [{}]", colored_code));
         }
-
-        if let Some(len) = node.length {
-            text.push_str(&format!(" (L: {})", len).dimmed().to_string());
-        }
-
-        if let Some(ref title) = node.title {
-            text.push_str(&format!(" - \"{}\"", title).cyan().to_string());
-        }
-
+        if let Some(len) = node.length { text.push_str(&format!(" (L: {})", len).dimmed().to_string()); }
+        if let Some(ref title) = node.title { text.push_str(&format!(" - \"{}\"", title).cyan().to_string()); }
         println!("{}", text);
-
         let child_count = node.children.len();
-        let next_prefix = if prefix.is_empty() {
-            "".to_string()
-        } else if is_last {
-            format!("{}    ", prefix)
-        } else {
-            format!("{}│   ", prefix)
-        };
-
+        let next_prefix = if prefix.is_empty() { "".to_string() } else if is_last { format!("{}    ", prefix) } else { format!("{}│   ", prefix) };
         for (i, (child_name, child_node)) in node.children.iter().enumerate() {
             let is_last_child = i == child_count - 1;
             format_node(child_name, child_node, &next_prefix, is_last_child);
         }
     }
-
     format_node(&format!("{} {}", "🌍".blue(), base_url.bold()), &root_node, "", true);
 }
 
 fn extract_links(html: &str) -> Vec<String> {
     let mut links = Vec::new();
     let doc = Document::from(html);
-    
-    // Nipper uses .iter() for selection
     for el in doc.select("a").iter() {
         if let Some(href) = el.attr("href") {
             links.push(href.to_string());
         }
     }
-
-    for el in doc.select("[src]").iter() {
-        if let Some(src) = el.attr("src") {
-            links.push(src.to_string());
-        }
-    }
-
     links
 }
 
 fn normalize_path(path: &str, base_url: &str) -> Option<String> {
-    let path = path.trim();
-    if path.is_empty() || path.starts_with('#') || path.starts_with("javascript:") || path.starts_with("mailto:") || path.starts_with("tel:") {
-        return None;
-    }
-
-    // If it's an absolute URL
-    if path.starts_with("http://") || path.starts_with("https://") {
+    if path.starts_with("http") {
         if path.starts_with(base_url) {
-            let relative = &path[base_url.len()..];
-            let clean = relative.trim_start_matches('/');
-            if clean.is_empty() { return None; }
-            return Some(clean.to_string());
+            return Some(path.replace(base_url, "").trim_start_matches('/').to_string());
         }
-        return None; // Out of scope
-    }
-
-    // Relative path
-    let relative = path.trim_start_matches('/');
-    if relative.is_empty() { return None; }
-    
-    // Ignore common static assets to avoid noise
-    let lower = relative.to_lowercase();
-    if lower.ends_with(".png") || lower.ends_with(".jpg") || lower.ends_with(".jpeg") || 
-       lower.ends_with(".gif") || lower.ends_with(".css") || lower.ends_with(".woff") || lower.ends_with(".woff2") ||
-       lower.ends_with(".svg") || lower.ends_with(".ico") {
         return None;
     }
-
-    Some(relative.to_string())
+    if path.starts_with('/') {
+        return Some(path.trim_start_matches('/').to_string());
+    }
+    if path.starts_with('#') || path.starts_with("javascript:") || path.is_empty() {
+        return None;
+    }
+    Some(path.to_string())
 }
