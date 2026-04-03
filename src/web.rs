@@ -74,6 +74,7 @@ async fn start_scan(
         cookie: None,
         auto_wordlist: payload.auto_wordlist.unwrap_or(false),
         auto_threads: payload.auto_threads.unwrap_or(false),
+        show_logs: false,
     };
 
     let (tx, rx) = mpsc::channel(100);

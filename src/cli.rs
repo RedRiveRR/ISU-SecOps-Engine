@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
 #[command(name = "secops")]
-#[command(about = "ISU SecOps Engine CLI", version = "0.3.0")]
+#[command(about = "ISU SecOps Engine CLI", version = "0.4.0")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,
@@ -61,4 +61,8 @@ pub struct DirbruteArgs {
     /// Enable Adaptive Threading (Auto performance scaling)
     #[arg(long = "auto-threads")]
     pub auto_threads: bool,
+
+    /// Show real-time scan logs in terminal
+    #[arg(short = 'l', long = "show-logs")]
+    pub show_logs: bool,
 }

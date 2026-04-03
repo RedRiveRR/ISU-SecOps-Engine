@@ -24,6 +24,7 @@ pub enum ScanEvent {
     Error { message: String },
     Finished { total_found: usize },
     ConcurrencyUpdate { current: usize },
+    Attempt { path: String, status: u16, is_interesting: bool },
 }
 
 #[derive(Debug, Default)]
@@ -61,6 +62,17 @@ pub async fn run_dirbrute(args: DirbruteArgs) {
                 // Or just ignore it to avoid cluttering the tree.
                 // Let's print a subtle message.
                 println!("{} Concurrency adjusted to: {}", "[*]".blue(), current);
+            }
+            ScanEvent::Attempt { path, status, is_interesting } => {
+                if args.show_logs {
+                    let status_str = status.to_string();
+                    let colored_status = if is_interesting {
+                        status_str.green()
+                    } else {
+                        status_str.red()
+                    };
+                    println!("{} [TRY] /{} - {}", "[*]".blue(), path.trim_start_matches('/'), colored_status);
+                }
             }
             ScanEvent::Finished { total_found } => {
                 println!("\n{} Scan complete. Found {} interesting paths.\n", "[+]".green(), total_found);
@@ -182,7 +194,16 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
                         adjust_concurrency(status, elapsed, &limit, &sem, &tx_clone).await;
                     }
 
-                    if is_interesting_status(status) {
+                    let interesting = is_interesting_status(status);
+                    
+                    // Emit attempt event
+                    let _ = tx_clone.send(ScanEvent::Attempt { 
+                        path: path_clone.clone(), 
+                        status: status.as_u16(),
+                        is_interesting: interesting
+                    }).await;
+
+                    if interesting {
                         let sr = ScanResult {
                             path: path_clone,
                             status: status.as_u16(),

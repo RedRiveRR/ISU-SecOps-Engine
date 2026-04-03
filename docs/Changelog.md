@@ -2,6 +2,15 @@
 
 ISU SecOps Engine projesindeki tüm önemli değişiklikler bu dosyada kayıt altına alınacaktır.
 
+## [v0.4.0] - 2026-04-03
+### Eklendi
+- **Görünüm Ayrıştırma (UI/UX)**:
+    - Web UI üzerinde "Bulunan Sonuçlar" ve "Canlı Loglar" sekmeleri eklendi.
+    - Canlı loglar için 500 satırlık kayar pencere (rolling window) optimizasyonu yapıldı.
+- **CLI Geliştirmesi**:
+    - `--show-logs` (`-l`) parametresi eklendi. Aktifleştirildiğinde tüm denemeler anlık olarak terminale yazdırılır.
+- Proje sürümü `v0.4.0` olarak yükseltildi.
+
 ## [v0.3.0] - 2026-04-03
 ### Eklendi
 - **Akıllı Mod (Smart Mode)**:

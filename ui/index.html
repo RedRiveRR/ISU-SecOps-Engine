@@ -159,9 +159,13 @@
             transform: translateY(1px);
         }
 
+        .btn-stop {
+            background: var(--danger) !important;
+        }
+
         .results-panel {
             height: calc(100vh - 180px);
-            overflow-y: auto;
+            overflow: hidden; /* Individual tabs will scroll */
         }
 
         .results-panel::-webkit-scrollbar {
@@ -229,13 +233,81 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* Tabs Styling */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            padding: 4px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            margin-bottom: 8px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+            color: var(--text-muted);
+        }
+
+        .tab.active {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tab-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .tab-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .tab-content::-webkit-scrollbar-thumb {
+            background: var(--card-border);
+            border-radius: 3px;
+        }
+
+        .log-entry {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-left: 2px solid transparent;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .log-entry.interesting {
+            border-left-color: var(--success);
+            background: rgba(16, 185, 129, 0.05);
+        }
     </style>
 </head>
 <body>
 
     <header>
         <div class="brand-title">ISU <span>SecOps</span> Engine</div>
-        <div style="font-size: 13px; color: var(--text-muted);">v0.3.0 &middot; Dirbrute Web</div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div id="connection_status" style="font-size: 10px; color: var(--danger); background: rgba(239, 68, 68, 0.1); padding: 2px 8px; border-radius: 10px;">OFFLINE</div>
+            <div style="font-size: 13px; color: var(--text-muted);">v0.4.2 &middot; Dirbrute Web</div>
+        </div>
     </header>
 
     <main>
@@ -278,11 +350,27 @@
             </div>
         </div>
 
-        <div class="panel results-panel">
-            <h2>Results <span id="result_count" style="font-size: 12px; font-weight: normal; margin-left: auto; color: var(--text-muted); background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 12px;">0 found</span></h2>
-            <div class="tree-view" id="results_container">
-                <div style="text-align: center; color: var(--text-muted); margin-top: 40px; font-style: italic;">
-                    Enter target and wordlist to begin directory discovery.
+        <div class="panel results-panel" style="display: flex; flex-direction: column;">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('results')" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    Bulunan Sonuçlar <span id="found_count_badge" style="background: var(--success); color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px; display: none;">0</span>
+                </div>
+                <div class="tab" onclick="switchTab('logs')">Canlı Loglar</div>
+            </div>
+
+            <div id="results_tab" class="tab-content active">
+                <div class="tree-view" id="results_container">
+                    <div style="text-align: center; color: var(--text-muted); margin-top: 40px; font-style: italic;">
+                        Bulunan gizli klasörler burada hiyerarşik olarak listelenecektir.
+                    </div>
+                </div>
+            </div>
+
+            <div id="logs_tab" class="tab-content">
+                <div class="tree-view" id="logs_container">
+                    <div style="text-align: center; color: var(--text-muted); margin-top: 40px; font-style: italic;">
+                        Anlık tarama logları burada görüntülenecektir.
+                    </div>
                 </div>
             </div>
         </div>
@@ -296,6 +384,19 @@
             if (code >= 300 && code < 400) return 'status-300';
             if (code >= 400 && code < 500) return 'status-400';
             return 'status-500';
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            if (tabName === 'results') {
+                document.querySelectorAll('.tab')[0].classList.add('active');
+                document.getElementById('results_tab').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab')[1].classList.add('active');
+                document.getElementById('logs_tab').classList.add('active');
+            }
         }
 
         function toggleInputs() {
@@ -328,17 +429,27 @@
 
             // Normalize URL: Ensure protocol is present
             if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                url = 'https://' + url;
-                document.getElementById('target_url').value = url; // Update field for feedback
+                const isLocal = url.startsWith('localhost') || url.startsWith('127.0.0.1') || /^\d{1,3}\./.test(url);
+                url = (isLocal ? 'http://' : 'https://') + url;
+                document.getElementById('target_url').value = url;
             }
+
+            console.log("Starting scan for:", url);
 
             // Reset UI
             document.getElementById('results_container').innerHTML = '';
-            document.getElementById('result_count').innerText = '0 found';
+            document.getElementById('logs_container').innerHTML = '';
+            document.getElementById('found_count_badge').innerText = '0';
+            document.getElementById('found_count_badge').style.display = 'none';
             document.getElementById('btn_scan').disabled = true;
             document.getElementById('btn_scan').style.opacity = '0.5';
             document.getElementById('progress_indicator').style.display = 'flex';
             document.getElementById('progress_text').innerText = 'Starting...';
+            
+            const startLog = document.createElement('div');
+            startLog.className = 'log-entry interesting';
+            startLog.innerHTML = `<span style="color: var(--success);">[*] Scan request sent for ${url}</span>`;
+            document.getElementById('logs_container').appendChild(startLog);
 
             if (eventSource) {
                 eventSource.close();
@@ -370,21 +481,64 @@
         }
 
         function connectSSE(streamId) {
+            console.log("Connecting to SSE stream:", streamId);
+            const statusIndicator = document.getElementById('connection_status');
+            
             eventSource = new EventSource(`/api/scan/stream/${streamId}`);
             let foundCount = 0;
+            
+            eventSource.onopen = () => {
+                console.log("SSE Stream Opened");
+                statusIndicator.innerText = "CONNECTED";
+                statusIndicator.style.color = "var(--success)";
+                statusIndicator.style.background = "rgba(16, 185, 129, 0.1)";
+            };
 
             eventSource.onmessage = function(event) {
                 const data = JSON.parse(event.data);
+                console.log("SSE Event:", data.event, data);
                 
                 if (data.event === "Start") {
+                    const statusIndicator = document.getElementById('connection_status');
+                    statusIndicator.innerText = "CONNECTED";
+                    statusIndicator.style.color = "var(--success)";
+                    statusIndicator.style.background = "rgba(16, 185, 129, 0.1)";
                     document.getElementById('progress_text').innerText = `Scanning ${data.total} paths...`;
                 } 
                 else if (data.event === "ConcurrencyUpdate") {
                     document.getElementById('concurrency_val').innerText = `Speed: ${data.current}x`;
                 }
+                else if (data.event === "Attempt") {
+                    const logsContainer = document.getElementById('logs_container');
+                    const el = document.createElement('div');
+                    el.className = `log-entry ${data.is_interesting ? 'interesting' : ''}`;
+                    
+                    const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    el.innerHTML = `
+                        <span style="color: var(--text-muted); font-size: 10px;">[${time}]</span>
+                        <span style="color: var(--primary); margin-left: 4px;">TRY</span> 
+                        <span style="margin-left: 4px;">/${data.path.replace(/^\//,'')}</span>
+                        <span style="float: right; font-weight: bold; color: ${data.is_interesting ? 'var(--success)' : 'var(--danger)'}">${data.status}</span>
+                    `;
+                    
+                    logsContainer.appendChild(el);
+                    
+                    // Limit logs to last 500 lines
+                    if (logsContainer.children.length > 500) {
+                        logsContainer.removeChild(logsContainer.firstChild);
+                    }
+
+                    // Auto-scroll logic for logs (if near bottom)
+                    const tab = document.getElementById('logs_tab');
+                    if (tab.scrollTop + tab.clientHeight >= tab.scrollHeight - 100) {
+                        tab.scrollTop = tab.scrollHeight;
+                    }
+                }
                 else if (data.event === "Found") {
                     foundCount++;
-                    document.getElementById('result_count').innerText = `${foundCount} found`;
+                    const badge = document.getElementById('found_count_badge');
+                    badge.innerText = foundCount;
+                    badge.style.display = 'inline-block';
                     
                     const res = data.result;
                     const el = document.createElement('div');
@@ -401,9 +555,9 @@
                     `;
                     document.getElementById('results_container').appendChild(el);
                     
-                    // Auto-scroll to bottom
-                    const panel = document.querySelector('.results-panel');
-                    panel.scrollTop = panel.scrollHeight;
+                    // Auto-scroll results
+                    const tab = document.getElementById('results_tab');
+                    tab.scrollTop = tab.scrollHeight;
                 }
                 else if (data.event === "Error") {
                     const el = document.createElement('div');
@@ -413,13 +567,19 @@
                     document.getElementById('results_container').appendChild(el);
                 }
                 else if (data.event === "Finished") {
+                    console.log("Scan Finished:", data);
                     document.getElementById('progress_text').innerText = `Completed. Found ${data.total_found}.`;
                     scanFinished(true);
                 }
             };
 
-            eventSource.onerror = function() {
+            eventSource.onerror = function(err) {
+                console.error("SSE Error:", err);
                 eventSource.close();
+                const statusIndicator = document.getElementById('connection_status');
+                statusIndicator.innerText = "OFFLINE";
+                statusIndicator.style.color = "var(--danger)";
+                statusIndicator.style.background = "rgba(239, 68, 68, 0.1)";
                 scanFinished();
             };
         }
