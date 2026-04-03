@@ -11,7 +11,7 @@ Merkezi tarama motorunu doğrulamak için:
 
 **Çalıştırma:**
 ```bash
-cargo run --release -- pentest dirbrute "http://localhost:8000" --wordlist common.txt
+cargo run --release -- pentest dirbrute "http://localhost:8000" --wordlist wordlists/common.txt
 ```
 
 ### Doğrulama Listesi:

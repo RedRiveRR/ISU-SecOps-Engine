@@ -93,7 +93,7 @@ cargo run --release -- pentest dirbrute "http://target.com" --stealth --crawler 
 </div>
 
 Proje geliştiriciler için tam otomatize edilmiştir:
-- **`Justfile` / `Makefile`**: `just ci` komutuyla fmt, lint, audit ve test adımlarını tek seferde yapabilirsiniz.
+- **`Justfile`**: `just ci` komutuyla fmt, lint, audit ve test adımlarını tek seferde yapabilirsiniz.
 - **`.vscode`**: Hata ayıklama (LLDB) ve görev otomasyonları (Tasks) hazır olarak gelir.
 - **`cargo-deny`**: Lisans ve güvenlik zafiyet denetimi her derlemede zorunludur.
 
