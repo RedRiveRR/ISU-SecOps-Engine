@@ -16,6 +16,8 @@ use tokio::sync::Mutex;
 pub struct ScanResult {
     pub path: String,
     pub status: u16,
+    pub length: u64,
+    pub title: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -28,11 +30,14 @@ pub enum ScanEvent {
     ConcurrencyUpdate { current: usize },
     Attempt { path: String, status: u16, is_interesting: bool },
     CrawlFound { path: String, source: String },
+    WafWarning { message: String },
 }
 
 #[derive(Debug, Default)]
 struct TreeNode {
     status: Option<u16>,
+    length: Option<u64>,
+    title: Option<String>,
     children: BTreeMap<String, TreeNode>,
 }
 
@@ -76,6 +81,9 @@ pub async fn run_dirbrute(args: DirbruteArgs) {
                     };
                     println!("{} [TRY] /{} - {}", "[*]".blue(), path.trim_start_matches('/'), colored_status);
                 }
+            }
+            ScanEvent::WafWarning { message } => {
+                println!("\n{} {}\n", "[!] WAF TESPİT EDİLDİ:".on_red().white().bold(), message.yellow().bold());
             }
             ScanEvent::CrawlFound { path, source } => {
                 if args.show_logs {
@@ -176,6 +184,8 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
 
     let semaphore = Arc::new(tokio::sync::Semaphore::new(initial_concurrency));
     let current_limit = Arc::new(std::sync::atomic::AtomicUsize::new(initial_concurrency));
+    let waf_error_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let waf_warned = Arc::new(std::sync::atomic::AtomicBool::new(false));
 
     let visited = Arc::new(Mutex::new(HashSet::new()));
     let (master_tx, mut queue_rx) = mpsc::channel::<String>(10000); // Path queue
@@ -221,6 +231,8 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
                         let args_auto = args.auto_threads;
                         let args_crawl = args.crawler;
                         let limit = current_limit.clone();
+                        let waf_error_count = waf_error_count.clone();
+                        let waf_warned = waf_warned.clone();
 
                         tokio::spawn(async move {
                             let _permit = sem.acquire().await.unwrap();
@@ -233,6 +245,18 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
 
                             if let Ok(response) = res {
                                 let status = response.status();
+                                
+                                // WAF Detection logic
+                                if status.as_u16() == 403 || status.as_u16() == 429 {
+                                    let old = waf_error_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                                    if old == 9 && !waf_warned.swap(true, std::sync::atomic::Ordering::SeqCst) {
+                                        let _ = tx_clone.send(ScanEvent::WafWarning { 
+                                            message: "Yüksek oranda 403/429 hatası! Sunucuda WAF (Web Application Firewall) bloklaması olabilir.".into() 
+                                        }).await;
+                                    }
+                                } else if status.is_success() {
+                                    waf_error_count.store(0, std::sync::atomic::Ordering::SeqCst);
+                                }
                                 
                                 if args_auto {
                                     adjust_concurrency(status, elapsed, &limit, &sem, &tx_clone).await;
@@ -247,18 +271,47 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
                                 }).await;
 
                                 if interesting {
+                                    let content_type = response.headers().get(reqwest::header::CONTENT_TYPE)
+                                        .and_then(|v| v.to_str().ok())
+                                        .unwrap_or("")
+                                        .to_string();
+                                    
+                                    let mut length = response.content_length().unwrap_or(0);
+                                    let mut title = None;
+                                    let mut body_text = String::new();
+
+                                    let is_html = content_type.contains("text/html");
+                                    let needs_body = is_html || args_crawl;
+
+                                    if needs_body {
+                                        if let Ok(b) = response.text().await {
+                                            if length == 0 {
+                                                length = b.len() as u64;
+                                            }
+                                            if is_html {
+                                                let doc = Document::from(b.as_str());
+                                                let t = doc.select("title").text().to_string();
+                                                if !t.trim().is_empty() {
+                                                    title = Some(t.trim().to_string());
+                                                }
+                                            }
+                                            body_text = b;
+                                        }
+                                    }
+
                                     let sr = ScanResult {
                                         path: path_clone.clone(),
                                         status: status.as_u16(),
+                                        length,
+                                        title,
                                     };
                                     let _ = tx_clone.send(ScanEvent::Found { result: sr.clone() }).await;
                                     found_result = Some(sr);
 
                                     // Crawler logic
-                                    if args_crawl && (status.is_success() || matches!(status.as_u16(), 401 | 403)) {
-                                        if let Ok(body) = response.text().await {
-                                            let links = extract_links(&body);
-                                            let mut v = visited_clone.lock().await;
+                                    if args_crawl && !body_text.is_empty() && (status.is_success() || matches!(status.as_u16(), 401 | 403)) {
+                                        let links = extract_links(&body_text);
+                                        let mut v = visited_clone.lock().await;
                                             for link in links {
                                                 if let Some(normalized) = normalize_path(&link, &base_url_clone) {
                                                     if v.insert(normalized.clone()) {
@@ -364,6 +417,8 @@ fn build_tree(results: &[ScanResult]) -> TreeNode {
             current = current.children.entry(part.to_string()).or_insert_with(TreeNode::default);
             if is_last {
                 current.status = Some(res.status);
+                current.length = Some(res.length);
+                current.title = res.title.clone();
             }
         }
     }
@@ -393,6 +448,14 @@ fn print_real_tree(base_url: &str, results: &[ScanResult]) {
                 _ => code_str.normal(),
             };
             text.push_str(&format!(" [{}]", colored_code));
+        }
+
+        if let Some(len) = node.length {
+            text.push_str(&format!(" (L: {})", len).dimmed().to_string());
+        }
+
+        if let Some(ref title) = node.title {
+            text.push_str(&format!(" - \"{}\"", title).cyan().to_string());
         }
 
         println!("{}", text);
