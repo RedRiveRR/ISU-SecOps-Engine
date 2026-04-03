@@ -150,11 +150,7 @@ pub async fn run_dirbrute(args: DirbruteArgs) {
                 );
             }
             ScanEvent::StealthStatus { message } => {
-                println!(
-                    "{} {}",
-                    "[🥷 STEALTH]".magenta().bold(),
-                    message.magenta()
-                );
+                println!("{} {}", "[🥷 STEALTH]".magenta().bold(), message.magenta());
             }
             ScanEvent::CrawlFound { path, source } => {
                 if args.show_logs {
@@ -215,13 +211,15 @@ pub async fn run_dirbrute_core(
     if let Some(proxy_urls) = &args.proxy {
         for proxy_url in proxy_urls.split(',') {
             let proxy_url_t = proxy_url.trim();
-            if proxy_url_t.is_empty() { continue; }
+            if proxy_url_t.is_empty() {
+                continue;
+            }
             let mut builder = reqwest::Client::builder()
                 .user_agent("dirbrute/1.0")
                 .default_headers(header_map.clone())
                 .redirect(reqwest::redirect::Policy::none())
                 .timeout(Duration::from_secs(10));
-                
+
             if let Ok(proxy) = reqwest::Proxy::all(proxy_url_t) {
                 builder = builder.proxy(proxy);
             }
@@ -388,7 +386,7 @@ pub async fn run_dirbrute_core(
 
                         let mut decoy_client_idx = 0;
                         let mut main_client_idx = 0;
-                        
+
                         let (should_decoy, decoy_index, jitter, random_ip, random_ua_idx) = {
                             use rand::Rng;
                             let mut rng = rand::thread_rng();
@@ -413,13 +411,13 @@ pub async fn run_dirbrute_core(
                             let _ = tx_clone.send(ScanEvent::StealthStatus { message: format!("Contextual blending: fetched /{}", decoy) }).await;
                             let _ = clients[decoy_client_idx].get(&decoy_url).send().await;
                         }
-                        
+
                         // --- Integrated WAF Evasion & Stealth ---
                         // 1. Micro-Jitter (to prevent time-based heuristic blocking)
                         tokio::time::sleep(tokio::time::Duration::from_millis(jitter)).await;
 
                         // 2. Randomized IP Spoofing Headers
-                        
+
                         // 3. Realistic User-Agent Rotation
                         let user_agents = [
                             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
@@ -433,7 +431,7 @@ pub async fn run_dirbrute_core(
 
                         let start = std::time::Instant::now();
                         let url = format!("{}/{}", base_url_clone, path_clone);
-                        
+
                         let res = clients[main_client_idx].get(&url)
                             .header("User-Agent", random_ua)
                             .header("X-Forwarded-For", &random_ip)
@@ -447,7 +445,7 @@ pub async fn run_dirbrute_core(
                             .header("Accept-Language", "en-US,en;q=0.5")
                             .header("Upgrade-Insecure-Requests", "1")
                             .send().await;
-                            
+
                         let elapsed = start.elapsed();
 
                         let mut found_result = None;
