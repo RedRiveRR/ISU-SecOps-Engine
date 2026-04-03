@@ -28,7 +28,9 @@ pub struct ScanRequest {
     pub auto_wordlist: bool,
     pub auto_threads: bool,
     pub crawler: bool,
+    pub stealth: bool,
     pub depth: usize,
+    pub proxy: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -60,7 +62,7 @@ async fn start_scan(
     State(state): State<AppState>,
     Json(payload): Json<ScanRequest>,
 ) -> Result<Json<ScanResponse>, Infallible> {
-    let (tx, rx) = mpsc::channel(100);
+    let (tx, rx) = mpsc::channel(20000);
     let stream_id = Uuid::new_v4().to_string();
 
     {
@@ -79,6 +81,8 @@ async fn start_scan(
         depth: payload.depth,
         show_logs: true,
         crawler: payload.crawler,
+        stealth: payload.stealth,
+        proxy: payload.proxy,
         output: None,
         format: None,
     };

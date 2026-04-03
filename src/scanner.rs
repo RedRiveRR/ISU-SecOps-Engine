@@ -63,6 +63,9 @@ pub enum ScanEvent {
         status: u16,
         length: u64,
     },
+    StealthStatus {
+        message: String,
+    },
 }
 
 #[derive(Debug, Default)]
@@ -146,6 +149,13 @@ pub async fn run_dirbrute(args: DirbruteArgs) {
                     length
                 );
             }
+            ScanEvent::StealthStatus { message } => {
+                println!(
+                    "{} {}",
+                    "[🥷 STEALTH]".magenta().bold(),
+                    message.magenta()
+                );
+            }
             ScanEvent::CrawlFound { path, source } => {
                 if args.show_logs {
                     println!(
@@ -201,13 +211,36 @@ pub async fn run_dirbrute_core(
         header_map.insert(reqwest::header::COOKIE, value);
     }
 
-    let client = reqwest::Client::builder()
-        .user_agent("dirbrute/1.0")
-        .default_headers(header_map)
-        .redirect(reqwest::redirect::Policy::none())
-        .timeout(Duration::from_secs(10))
-        .build()
-        .expect("Failed to build HTTP client");
+    let mut clients = Vec::new();
+    if let Some(proxy_urls) = &args.proxy {
+        for proxy_url in proxy_urls.split(',') {
+            let proxy_url_t = proxy_url.trim();
+            if proxy_url_t.is_empty() { continue; }
+            let mut builder = reqwest::Client::builder()
+                .user_agent("dirbrute/1.0")
+                .default_headers(header_map.clone())
+                .redirect(reqwest::redirect::Policy::none())
+                .timeout(Duration::from_secs(10));
+                
+            if let Ok(proxy) = reqwest::Proxy::all(proxy_url_t) {
+                builder = builder.proxy(proxy);
+            }
+            if let Ok(client) = builder.build() {
+                clients.push(client);
+            }
+        }
+    }
+
+    if clients.is_empty() {
+        let builder = reqwest::Client::builder()
+            .user_agent("dirbrute/1.0")
+            .default_headers(header_map.clone())
+            .redirect(reqwest::redirect::Policy::none())
+            .timeout(Duration::from_secs(10));
+        clients.push(builder.build().expect("Failed to build HTTP client"));
+    }
+
+    let clients_arc = Arc::new(clients);
 
     let mut paths = Vec::new();
 
@@ -265,7 +298,7 @@ pub async fn run_dirbrute_core(
     // --- Soft-404 Calibration ---
     let mut soft_404_baseline: Option<(u16, u64)> = None;
     let random_path = "DirBrute-Heuristic-404-Test";
-    if let Ok(resp) = client
+    if let Ok(resp) = clients_arc[0]
         .get(format!("{}/{}", base_url, random_path))
         .send()
         .await
@@ -292,6 +325,7 @@ pub async fn run_dirbrute_core(
     let current_limit = Arc::new(std::sync::atomic::AtomicUsize::new(initial_concurrency));
     let waf_error_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let waf_warned = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let cooldown_until = Arc::new(std::sync::atomic::AtomicU64::new(0));
 
     let visited = Arc::new(Mutex::new(HashSet::new()));
     let technologies_found = Arc::new(Mutex::new(HashSet::new()));
@@ -321,7 +355,7 @@ pub async fn run_dirbrute_core(
             res = queue_rx.recv(), if active_tasks < max_concurrency => {
                 if let Some((path, depth)) = res {
                     active_tasks += 1;
-                    let client = client.clone();
+                    let clients = clients_arc.clone();
                     let base_url_clone = base_url.clone();
                     let path_clone = path.clone();
                     let sem = semaphore.clone();
@@ -338,12 +372,82 @@ pub async fn run_dirbrute_core(
                     let args_crawl = args.crawler;
                     let auto_threads = args.auto_threads;
                     let paths_arc_clone = paths_arc.clone();
+                    let stealth_mode = args.stealth;
+                    let cooldown_until_clone = cooldown_until.clone();
 
                     tokio::spawn(async move {
                         let _permit = sem.acquire().await.unwrap();
+
+                        if stealth_mode {
+                            let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+                            let cd = cooldown_until_clone.load(std::sync::atomic::Ordering::SeqCst);
+                            if now < cd {
+                                tokio::time::sleep(tokio::time::Duration::from_secs(cd - now)).await;
+                            }
+                        }
+
+                        let mut decoy_client_idx = 0;
+                        let mut main_client_idx = 0;
+                        
+                        let (should_decoy, decoy_index, jitter, random_ip, random_ua_idx) = {
+                            use rand::Rng;
+                            let mut rng = rand::thread_rng();
+                            let ip = format!("{}.{}.{}.{}", rng.gen_range(1..255), rng.gen_range(1..255), rng.gen_range(1..255), rng.gen_range(1..=254));
+                            if !clients.is_empty() {
+                                decoy_client_idx = rng.gen_range(0..clients.len());
+                                main_client_idx = rng.gen_range(0..clients.len());
+                            }
+                            (
+                                rng.gen_bool(0.15),
+                                rng.gen_range(0..6),
+                                rng.gen_range(10..150),
+                                ip,
+                                rng.gen_range(0..6)
+                            )
+                        };
+
+                        if stealth_mode && should_decoy {
+                            let decoys = ["", "favicon.ico", "robots.txt", "sitemap.xml", "assets/", "public/"];
+                            let decoy = decoys[decoy_index];
+                            let decoy_url = format!("{}/{}", base_url_clone, decoy);
+                            let _ = tx_clone.send(ScanEvent::StealthStatus { message: format!("Contextual blending: fetched /{}", decoy) }).await;
+                            let _ = clients[decoy_client_idx].get(&decoy_url).send().await;
+                        }
+                        
+                        // --- Integrated WAF Evasion & Stealth ---
+                        // 1. Micro-Jitter (to prevent time-based heuristic blocking)
+                        tokio::time::sleep(tokio::time::Duration::from_millis(jitter)).await;
+
+                        // 2. Randomized IP Spoofing Headers
+                        
+                        // 3. Realistic User-Agent Rotation
+                        let user_agents = [
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
+                            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Mobile/15E148 Safari/604.1",
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/122.0.0.0 Safari/537.36",
+                        ];
+                        let random_ua = user_agents[random_ua_idx];
+
                         let start = std::time::Instant::now();
                         let url = format!("{}/{}", base_url_clone, path_clone);
-                        let res = client.get(&url).send().await;
+                        
+                        let res = clients[main_client_idx].get(&url)
+                            .header("User-Agent", random_ua)
+                            .header("X-Forwarded-For", &random_ip)
+                            .header("X-Originating-IP", &random_ip)
+                            .header("X-Remote-IP", &random_ip)
+                            .header("X-Remote-Addr", &random_ip)
+                            .header("X-Real-IP", &random_ip)
+                            .header("Client-IP", &random_ip)
+                            .header("True-Client-IP", &random_ip)
+                            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+                            .header("Accept-Language", "en-US,en;q=0.5")
+                            .header("Upgrade-Insecure-Requests", "1")
+                            .send().await;
+                            
                         let elapsed = start.elapsed();
 
                         let mut found_result = None;
@@ -353,7 +457,17 @@ pub async fn run_dirbrute_core(
 
                             if status.as_u16() == 403 || status.as_u16() == 429 {
                                 let old = waf_error_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-                                if old == 9 && !waf_warned.swap(true, std::sync::atomic::Ordering::SeqCst) {
+                                if stealth_mode && old >= 3 {
+                                    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+                                    let cd = cooldown_until_clone.load(std::sync::atomic::Ordering::SeqCst);
+                                    if now >= cd {
+                                        cooldown_until_clone.store(now + 60, std::sync::atomic::Ordering::SeqCst);
+                                        waf_error_count.store(0, std::sync::atomic::Ordering::SeqCst);
+                                        let _ = tx_clone.send(ScanEvent::StealthStatus {
+                                            message: "WAF Detected. Cooling down for 60 seconds...".into()
+                                        }).await;
+                                    }
+                                } else if old == 9 && !waf_warned.swap(true, std::sync::atomic::Ordering::SeqCst) {
                                     let _ = tx_clone.send(ScanEvent::WafWarning {
                                         message: "Yüksek oranda 403/429 hatası! WAF tespit edildi.".into()
                                     }).await;

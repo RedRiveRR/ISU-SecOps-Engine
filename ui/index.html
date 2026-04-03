@@ -406,6 +406,9 @@
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none;">
                     <input type="checkbox" id="crawler_enabled" style="width:auto;"> <span>Enable HTML Crawler</span>
                 </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none; margin-top: 4px;">
+                    <input type="checkbox" id="stealth_enabled" style="width:auto;"> <span style="color: #c4b5fd;">Deep Stealth Mode</span>
+                </label>
             </div>
 
             <div class="form-group">
@@ -426,6 +429,11 @@
                     <option value="2" selected>2 (One Level Deep)</option>
                     <option value="3">3 (Two Levels Deep)</option>
                 </select>
+            </div>
+
+            <div class="form-group">
+                <label for="proxy_url">Proxy Engine / Servers</label>
+                <input type="text" id="proxy_url" placeholder="http://1.2.3.4:8080, socks5://x.x.x.x:1080">
             </div>
 
             <button class="btn-launch" id="btn_scan" onclick="startScan()">Launch Scan</button>
@@ -507,6 +515,8 @@
                 auto_wordlist: document.getElementById('auto_wordlist').checked,
                 auto_threads: document.getElementById('auto_threads').checked,
                 crawler: document.getElementById('crawler_enabled').checked,
+                stealth: document.getElementById('stealth_enabled').checked,
+                proxy: document.getElementById('proxy_url').value.trim() || null,
                 depth: parseInt(document.getElementById('max_depth').value)
             };
 
@@ -561,6 +571,17 @@
                 } else if (data.event === "WafWarning") {
                     document.getElementById('waf_warning').style.display = 'flex';
                     document.getElementById('waf_warning_text').innerText = data.message;
+                } else if (data.event === "StealthStatus") {
+                    const logsContainer = document.getElementById('logs_container');
+                    const el = document.createElement('div');
+                    el.className = 'log-entry';
+                    el.style.color = '#c4b5fd';
+                    el.style.fontWeight = 'bold';
+                    el.innerText = `[🥷 STEALTH] ${data.message}`;
+                    logsContainer.appendChild(el);
+                    if (document.getElementById('logs_tab').classList.contains('active')) {
+                        document.getElementById('logs_tab').scrollTop = document.getElementById('logs_tab').scrollHeight;
+                    }
                 } else if (data.event === "CrawlFound") {
                     const container = document.getElementById('crawler_container');
                     if (![...container.children].some(el => el.dataset.path === data.path)) {

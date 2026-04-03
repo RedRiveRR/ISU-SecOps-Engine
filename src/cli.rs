@@ -81,4 +81,12 @@ pub struct DirbruteArgs {
     /// Output format: json, csv (default: auto-detect from extension or json)
     #[arg(short = 'f', long = "format")]
     pub format: Option<String>,
+
+    /// Enable Deep Stealth Mode (cool-downs, decoys, max evasion)
+    #[arg(short = 's', long = "stealth")]
+    pub stealth: bool,
+
+    /// Proxy server, or comma-separated list of proxies for rotation (e.g. "http://proxy1:8080, socks5://proxy2:1080")
+    #[arg(short = 'p', long = "proxy")]
+    pub proxy: Option<String>,
 }

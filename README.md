@@ -19,6 +19,8 @@ Kullanım kolaylığı sağlayan iki güçlü arayüz ile birlikte gelir:
 - **Akıllı İçerik Analizi (Smart Content)**: Bulunan yolların sadece HTTP durum koduna bakmak yerine arka planda içeriğini (`<title>`) ve boyutunu (`Content-Length`) çıkararak olası yanlış pozitif (false-positive) durumlarını filtrelemenize yardımcı olur.
 - **Özyinelemeli (Recursive) Tarama**: Bulunan dizinlerin altına otomatik olarak inme yeteneği (örneğin `/admin` -> `/admin/config.php`).
 - **Teknoloji Parmak İzi (Fingerprinting)**: Hedefteki yazılım yığınını (WordPress, Laravel, Django, Docker vb.) otomatik olarak teşhis eder ve görsel rozetlerle gösterir.
+- **Deep Stealth Mode (Derin Gizlilik)**: Güçlü WAF (Cloudflare vb.) tespit sistemlerini atlatabilmek için Contextual Blending (araya zararsız Decoy/Yanıltıcı istekler serpiştirme) ve otonom soğuma (Cooldown) refleksleri barındırır.
+- **Rotating Proxy Pool (Dönen Proxy)**: İsteklerinizi birbirinden bağımsız yüzlerce IP üzerinden geçiren rastgele proxy rotasyon motoruna sahiptir. Çoklu Proxy havuzu tanımlanabilir (HTTP/SOCKS5).
 - **Soft-404 Sezgisel (Heuristic) Filtresi**: Sunucunun rastgele yollara `200 OK` döndürdüğü durumları "Heuristic Calibration" ile anında tespit eder ve temiz veri sunar.
 - **Otomatik WAF Tespiti**: Sistem, hedefin bir WAF (Web Application Firewall) arkasında olduğunu veya hız sınırlaması (Rate-Limiting) uygulandığını sezdiğinde otomatik uyarı mekanizmasını tetikler.
 - **Akıllı Mod (Smart Mode)**: Dosya seçmekle uğraşmayın. Sistem, en yaygın kullanılan dizin ve dosyaları (admin, backup, .env vb.) otomatik olarak tarar.
@@ -62,6 +64,11 @@ Sistemin kelime listesini ve hızı otomatik ayarlaması için:
 cargo run --release -- pentest dirbrute "http://example.com" --auto-wordlist --auto-threads --crawler
 ```
 
+**Hayalet Tarama (Stealth & Proxy Pool):**
+```bash
+cargo run --release -- pentest dirbrute "http://example.com" --stealth --proxy "http://127.0.0.1:8080,socks5://192.168.1.5:1080"
+```
+
 **Sonuçları Dışa Aktarma:**
 ```bash
 cargo run --release -- pentest dirbrute "http://example.com" --output reports/results.json
@@ -80,6 +87,8 @@ cargo run --release -- pentest dirbrute "http://example.com" --output reports/re
 | `--header` | `-H` | İsteğe eklenecek özel HTTP başlığı |
 | `--cookie` | `-c` | İsteğe eklenecek özel HTTP çerezi |
 | `--crawler` | `-C` | HTML Crawler motorunu aktifleştirir |
+| `--stealth` | `-s` | WAF Evasion & Deep Stealth modunu etkinleştirir |
+| `--proxy` | `-p` | HTTP(S)/Socks5 Proxy adresi (veya virgülle ayrılmış havuz) |
 
 ## 🛡️ Kod Kalitesi ve Testler
 
