@@ -1,7 +1,6 @@
 use reqwest::{StatusCode, header::{HeaderMap, HeaderName, HeaderValue}};
 use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, BufReader};
-use futures::stream::{self, StreamExt};
 use colored::*;
 use std::time::Duration;
 use std::collections::BTreeMap;
@@ -9,6 +8,9 @@ use crate::cli::DirbruteArgs;
 use tokio::sync::mpsc;
 use serde::Serialize;
 use std::sync::Arc;
+use nipper::Document;
+use std::collections::HashSet;
+use tokio::sync::Mutex;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ScanResult {
@@ -25,6 +27,7 @@ pub enum ScanEvent {
     Finished { total_found: usize },
     ConcurrencyUpdate { current: usize },
     Attempt { path: String, status: u16, is_interesting: bool },
+    CrawlFound { path: String, source: String },
 }
 
 #[derive(Debug, Default)]
@@ -38,7 +41,7 @@ pub async fn run_dirbrute(args: DirbruteArgs) {
     
     let args_clone = args.clone();
     let scan_handle = tokio::spawn(async move {
-        run_dirbrute_core(args_clone, tx).await;
+        let _ = run_dirbrute_core(args_clone, tx).await;
     });
 
     let mut results = Vec::new();
@@ -74,6 +77,11 @@ pub async fn run_dirbrute(args: DirbruteArgs) {
                     println!("{} [TRY] /{} - {}", "[*]".blue(), path.trim_start_matches('/'), colored_status);
                 }
             }
+            ScanEvent::CrawlFound { path, source } => {
+                if args.show_logs {
+                    println!("{} [CRAWL] Discovered /{} (linked from /{})", "[+]".green(), path, source);
+                }
+            }
             ScanEvent::Finished { total_found } => {
                 println!("\n{} Scan complete. Found {} interesting paths.\n", "[+]".green(), total_found);
                 print_real_tree(&args.url, &results);
@@ -84,7 +92,7 @@ pub async fn run_dirbrute(args: DirbruteArgs) {
     let _ = scan_handle.await;
 }
 
-pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) {
+pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) -> Result<Vec<ScanResult>, Box<dyn std::error::Error + Send + Sync>> {
     let mut header_map = HeaderMap::new();
 
     for h in &args.headers {
@@ -127,7 +135,7 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
             Err(e) => {
                 if !args.auto_wordlist {
                     let _ = tx.send(ScanEvent::Error { message: format!("Wordlist açılamadı: {}", e) }).await;
-                    return;
+                    return Ok(vec![]);
                 }
             }
         }
@@ -144,7 +152,7 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
 
     if paths.is_empty() {
         let _ = tx.send(ScanEvent::Error { message: "Tarama yapılamaz: Wordlist boş!".to_string() }).await;
-        return;
+        return Ok(vec![]);
     }
     
     let total = paths.len();
@@ -169,64 +177,113 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
     let semaphore = Arc::new(tokio::sync::Semaphore::new(initial_concurrency));
     let current_limit = Arc::new(std::sync::atomic::AtomicUsize::new(initial_concurrency));
 
+    let visited = Arc::new(Mutex::new(HashSet::new()));
+    let (master_tx, mut queue_rx) = mpsc::channel::<String>(10000); // Path queue
+    let (done_tx, mut done_rx) = mpsc::channel::<(Option<ScanResult>, String)>(10000); // Task completion
     let mut results_vec = Vec::new();
-    let mut futures_stream = stream::iter(paths)
-        .map(|path| {
-            let client = client.clone();
-            let url = format!("{}/{}", base_url, path.trim_start_matches('/'));
-            let path_clone = path.clone();
-            let sem = semaphore.clone();
-            let tx_clone = tx.clone();
-            let auto_t = args.auto_threads;
-            let limit = current_limit.clone();
+    let mut active_tasks = 0;
 
-            async move {
-                let _permit = sem.acquire().await.unwrap();
-                let start = std::time::Instant::now();
-                let res = client.get(&url).send().await;
-                let elapsed = start.elapsed();
+    // Load initial paths
+    {
+        let mut v = visited.lock().await;
+        for path in paths {
+            let normalized = path.trim_start_matches('/').to_string();
+            if !normalized.is_empty() && v.insert(normalized.clone()) {
+                let _ = master_tx.send(normalized).await;
+            }
+        }
+    }
+    
+    // Main processing loop
+    loop {
+        tokio::select! {
+            // New path from queue
+            Some(path) = queue_rx.recv(), if active_tasks < max_concurrency => {
+                active_tasks += 1;
+                let client = client.clone();
+                let base_url_clone = base_url.clone();
+                let path_clone = path.clone();
+                let sem = semaphore.clone();
+                let tx_clone = tx.clone();
+                let master_tx_clone = master_tx.clone();
+                let done_tx_clone = done_tx.clone();
+                let visited_clone = visited.clone();
+                let args_auto = args.auto_threads;
+                let args_crawl = args.crawler;
+                let limit = current_limit.clone();
 
-                if let Ok(response) = res {
-                    let status = response.status();
-                    
-                    // Adaptive logic
-                    if auto_t {
-                        adjust_concurrency(status, elapsed, &limit, &sem, &tx_clone).await;
-                    }
+                tokio::spawn(async move {
+                    let _permit = sem.acquire().await.unwrap();
+                    let start = std::time::Instant::now();
+                    let url = format!("{}/{}", base_url_clone, path_clone);
+                    let res = client.get(&url).send().await;
+                    let elapsed = start.elapsed();
 
-                    let interesting = is_interesting_status(status);
-                    
-                    // Emit attempt event
-                    let _ = tx_clone.send(ScanEvent::Attempt { 
-                        path: path_clone.clone(), 
-                        status: status.as_u16(),
-                        is_interesting: interesting
-                    }).await;
+                    let mut found_result = None;
 
-                    if interesting {
-                        let sr = ScanResult {
-                            path: path_clone,
+                    if let Ok(response) = res {
+                        let status = response.status();
+                        
+                        if args_auto {
+                            adjust_concurrency(status, elapsed, &limit, &sem, &tx_clone).await;
+                        }
+
+                        let interesting = is_interesting_status(status);
+                        
+                        let _ = tx_clone.send(ScanEvent::Attempt { 
+                            path: path_clone.clone(), 
                             status: status.as_u16(),
-                        };
-                        let _ = tx_clone.send(ScanEvent::Found { result: sr.clone() }).await;
-                        Some(sr)
-                    } else {
-                        None
+                            is_interesting: interesting
+                        }).await;
+
+                        if interesting {
+                            let sr = ScanResult {
+                                path: path_clone.clone(),
+                                status: status.as_u16(),
+                            };
+                            let _ = tx_clone.send(ScanEvent::Found { result: sr.clone() }).await;
+                            found_result = Some(sr);
+
+                            // Crawler logic
+                            if args_crawl && status.is_success() {
+                                if let Ok(body) = response.text().await {
+                                    let links = extract_links(&body);
+                                    let mut v = visited_clone.lock().await;
+                                    for link in links {
+                                        if let Some(normalized) = normalize_path(&link, &base_url_clone) {
+                                            if v.insert(normalized.clone()) {
+                                                let _ = tx_clone.send(ScanEvent::CrawlFound { 
+                                                    path: normalized.clone(), 
+                                                    source: path_clone.clone() 
+                                                }).await;
+                                                let _ = master_tx_clone.send(normalized).await;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
-                } else {
-                    None
+                    let _ = done_tx_clone.send((found_result, path_clone)).await;
+                });
+            }
+            // A task finished
+            Some((res, _path)) = done_rx.recv() => {
+                active_tasks -= 1;
+                if let Some(sr) = res {
+                    results_vec.push(sr);
+                }
+                
+                // End check
+                if active_tasks == 0 && queue_rx.is_empty() {
+                    break;
                 }
             }
-        })
-        .buffer_unordered(max_concurrency);
-
-    while let Some(res) = futures_stream.next().await {
-        if let Some(sr) = res {
-            results_vec.push(sr);
         }
     }
 
     let _ = tx.send(ScanEvent::Finished { total_found: results_vec.len() }).await;
+    Ok(results_vec)
 }
 
 async fn adjust_concurrency(
@@ -346,4 +403,56 @@ fn print_real_tree(base_url: &str, results: &[ScanResult]) {
     }
 
     format_node(&format!("{} {}", "🌍".blue(), base_url.bold()), &root_node, "", true);
+}
+
+fn extract_links(html: &str) -> Vec<String> {
+    let mut links = Vec::new();
+    let doc = Document::from(html);
+    
+    // Nipper uses .iter() for selection
+    for el in doc.select("a").iter() {
+        if let Some(href) = el.attr("href") {
+            links.push(href.to_string());
+        }
+    }
+
+    for el in doc.select("[src]").iter() {
+        if let Some(src) = el.attr("src") {
+            links.push(src.to_string());
+        }
+    }
+
+    links
+}
+
+fn normalize_path(path: &str, base_url: &str) -> Option<String> {
+    let path = path.trim();
+    if path.is_empty() || path.starts_with('#') || path.starts_with("javascript:") || path.starts_with("mailto:") || path.starts_with("tel:") {
+        return None;
+    }
+
+    // If it's an absolute URL
+    if path.starts_with("http://") || path.starts_with("https://") {
+        if path.starts_with(base_url) {
+            let relative = &path[base_url.len()..];
+            let clean = relative.trim_start_matches('/');
+            if clean.is_empty() { return None; }
+            return Some(clean.to_string());
+        }
+        return None; // Out of scope
+    }
+
+    // Relative path
+    let relative = path.trim_start_matches('/');
+    if relative.is_empty() { return None; }
+    
+    // Ignore common static assets to avoid noise
+    let lower = relative.to_lowercase();
+    if lower.ends_with(".png") || lower.ends_with(".jpg") || lower.ends_with(".jpeg") || 
+       lower.ends_with(".gif") || lower.ends_with(".css") || lower.ends_with(".woff") || lower.ends_with(".woff2") ||
+       lower.ends_with(".svg") || lower.ends_with(".ico") {
+        return None;
+    }
+
+    Some(relative.to_string())
 }

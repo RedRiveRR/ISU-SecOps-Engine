@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
 #[command(name = "secops")]
-#[command(about = "ISU SecOps Engine CLI", version = "0.4.0")]
+#[command(about = "ISU SecOps Engine CLI", version = "0.5.0")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,
@@ -65,4 +65,8 @@ pub struct DirbruteArgs {
     /// Show real-time scan logs in terminal
     #[arg(short = 'l', long = "show-logs")]
     pub show_logs: bool,
+
+    /// Enable HTML Crawler to discover internal links
+    #[arg(short = 'C', long = "crawler")]
+    pub crawler: bool,
 }

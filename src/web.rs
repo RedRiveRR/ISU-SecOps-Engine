@@ -29,6 +29,7 @@ pub struct ScanRequest {
     threads: Option<usize>,
     auto_wordlist: Option<bool>,
     auto_threads: Option<bool>,
+    crawler: Option<bool>,
 }
 
 #[derive(Serialize)]
@@ -75,13 +76,14 @@ async fn start_scan(
         auto_wordlist: payload.auto_wordlist.unwrap_or(false),
         auto_threads: payload.auto_threads.unwrap_or(false),
         show_logs: false,
+        crawler: payload.crawler.unwrap_or(false),
     };
 
     let (tx, rx) = mpsc::channel(100);
 
     // Spawn scanner in background
     tokio::spawn(async move {
-        run_dirbrute_core(args, tx).await;
+        let _ = run_dirbrute_core(args, tx).await;
     });
 
     let stream_id = format!("scan_{}", STREAM_ID_COUNTER.fetch_add(1, Ordering::SeqCst));

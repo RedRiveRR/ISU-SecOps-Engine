@@ -1,0 +1,37 @@
+﻿cargo :     Checking secops v0.5.0 (C:\Users\Mert
+\Desktop\ISU-SecOps-Engine)
+At line:1 char:1
++ cargo check 2>&1 | Out-File -FilePath final_che
+ck_v2.txt -Encoding ut ...
++ ~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    
+    Checking se...-SecOps-Engine):String) [], R  
+  emoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+error[E0069]: `return;` in a function whose retur
+n type is not `()`
+   --> src\scanner.rs:138:21
+    |
+ 95 | ...dirbrute_core(args: DirbruteArgs, tx: mp
+sc::Sender<ScanEvent>) -> Result<Vec<ScanResult>,
+ Box<dyn std::error::Error + Send + Sync>> {
+    |                                            
+                          -----------------------
+------------------------------------------ expect
+ed `Result<Vec<ScanResult>, Box<dyn std::error::E
+rror + Send + Sync>>` because of this return type
+...
+138 | ...   return;
+    |       ^^^^^^ return type is not `()`
+    |
+help: give the `return` a value of the expected t
+ype
+    |
+138 |                     return Ok(vec![]);
+    |                            ++++++++++
+
+For more information about this error, try `rustc
+ --explain E0069`.
+error: could not compile `secops` (bin "secops") 
+due to 1 previous error

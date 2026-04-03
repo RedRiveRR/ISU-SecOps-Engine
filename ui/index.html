@@ -306,7 +306,7 @@
         <div class="brand-title">ISU <span>SecOps</span> Engine</div>
         <div style="display: flex; align-items: center; gap: 12px;">
             <div id="connection_status" style="font-size: 10px; color: var(--danger); background: rgba(239, 68, 68, 0.1); padding: 2px 8px; border-radius: 10px;">OFFLINE</div>
-            <div style="font-size: 13px; color: var(--text-muted);">v0.4.2 &middot; Dirbrute Web</div>
+            <div style="font-size: 13px; color: var(--text-muted);">v0.5.0 &middot; Dirbrute Web</div>
         </div>
     </header>
 
@@ -327,6 +327,10 @@
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none; font-size: 12px; margin-top: 4px;">
                     <input type="checkbox" id="auto_wordlist" style="width: auto;" onchange="toggleInputs()"> 
                     <span>Smart Mode (Auto Wordlist)</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none; font-size: 12px; margin-top: 4px;">
+                    <input type="checkbox" id="crawler_enabled" style="width: auto;"> 
+                    <span>Enable HTML Crawler</span>
                 </label>
             </div>
 
@@ -356,6 +360,7 @@
                     Bulunan Sonuçlar <span id="found_count_badge" style="background: var(--success); color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px; display: none;">0</span>
                 </div>
                 <div class="tab" onclick="switchTab('logs')">Canlı Loglar</div>
+                <div class="tab" onclick="switchTab('crawler')">Crawler</div>
             </div>
 
             <div id="results_tab" class="tab-content active">
@@ -370,6 +375,14 @@
                 <div class="tree-view" id="logs_container">
                     <div style="text-align: center; color: var(--text-muted); margin-top: 40px; font-style: italic;">
                         Anlık tarama logları burada görüntülenecektir.
+                    </div>
+                </div>
+            </div>
+
+            <div id="crawler_tab" class="tab-content">
+                <div class="tree-view" id="crawler_container">
+                    <div style="text-align: center; color: var(--text-muted); margin-top: 40px; font-style: italic;">
+                        Crawler tarafından keşfedilen bağlantılar burada listelenecektir.
                     </div>
                 </div>
             </div>
@@ -393,9 +406,12 @@
             if (tabName === 'results') {
                 document.querySelectorAll('.tab')[0].classList.add('active');
                 document.getElementById('results_tab').classList.add('active');
-            } else {
+            } else if (tabName === 'logs') {
                 document.querySelectorAll('.tab')[1].classList.add('active');
                 document.getElementById('logs_tab').classList.add('active');
+            } else if (tabName === 'crawler') {
+                document.querySelectorAll('.tab')[2].classList.add('active');
+                document.getElementById('crawler_tab').classList.add('active');
             }
         }
 
@@ -421,6 +437,7 @@
             const threads = parseInt(document.getElementById('threads').value);
             const auto_wordlist = document.getElementById('auto_wordlist').checked;
             const auto_threads = document.getElementById('auto_threads').checked;
+            const crawler = document.getElementById('crawler_enabled').checked;
 
             if (!url || (!wordlist && !auto_wordlist)) {
                 alert("Please fill in target URL and wordlist (or enable Smart Wordlist).");
@@ -439,6 +456,7 @@
             // Reset UI
             document.getElementById('results_container').innerHTML = '';
             document.getElementById('logs_container').innerHTML = '';
+            document.getElementById('crawler_container').innerHTML = '';
             document.getElementById('found_count_badge').innerText = '0';
             document.getElementById('found_count_badge').style.display = 'none';
             document.getElementById('btn_scan').disabled = true;
@@ -464,7 +482,8 @@
                         wordlist: auto_wordlist ? null : wordlist, 
                         threads,
                         auto_wordlist,
-                        auto_threads
+                        auto_threads,
+                        crawler
                     })
                 });
 
@@ -529,6 +548,40 @@
                     }
 
                     // Auto-scroll logic for logs (if near bottom)
+                    const tab = document.getElementById('logs_tab');
+                    if (tab.scrollTop + tab.clientHeight >= tab.scrollHeight - 100) {
+                        tab.scrollTop = tab.scrollHeight;
+                    }
+                }
+                else if (data.event === "CrawlFound") {
+                    const logsContainer = document.getElementById('logs_container');
+                    const el = document.createElement('div');
+                    el.className = 'log-entry interesting';
+                    
+                    const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    el.innerHTML = `
+                        <span style="color: var(--text-muted); font-size: 10px;">[${time}]</span>
+                        <span style="color: var(--success); margin-left: 4px;">CRAWL</span> 
+                        <span style="margin-left: 4px;">/${data.path}</span>
+                        <span style="float: right; color: var(--text-muted); font-size: 10px;">via /${data.source}</span>
+                    `;
+                    logsContainer.appendChild(el);
+
+                    // Add to crawler tab too
+                    const crawlerContainer = document.getElementById('crawler_container');
+                    const cEl = document.createElement('div');
+                    cEl.className = 'log-entry interesting';
+                    cEl.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span style="color: var(--success); font-weight: bold;">[FOUND]</span> 
+                                <span style="margin-left: 8px;">/${data.path}</span>
+                            </div>
+                            <span style="color: var(--text-muted); font-size: 10px;">Source: /${data.source}</span>
+                        </div>
+                    `;
+                    crawlerContainer.appendChild(cEl);
+                    
                     const tab = document.getElementById('logs_tab');
                     if (tab.scrollTop + tab.clientHeight >= tab.scrollHeight - 100) {
                         tab.scrollTop = tab.scrollHeight;
