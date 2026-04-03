@@ -189,15 +189,17 @@ pub async fn run_dirbrute_core(
             && let (Ok(name), Ok(value)) = (
                 HeaderName::from_bytes(k.trim().as_bytes()),
                 HeaderValue::from_str(v.trim()),
-            ) {
-                header_map.insert(name, value);
-            }
+            )
+        {
+            header_map.insert(name, value);
+        }
     }
 
     if let Some(cookie) = &args.cookie
-        && let Ok(value) = HeaderValue::from_str(cookie) {
-            header_map.insert(reqwest::header::COOKIE, value);
-        }
+        && let Ok(value) = HeaderValue::from_str(cookie)
+    {
+        header_map.insert(reqwest::header::COOKIE, value);
+    }
 
     let client = reqwest::Client::builder()
         .user_agent("secops-dirbrute/1.0")
@@ -490,10 +492,9 @@ async fn adjust_concurrency(
         if current > 2 {
             new_limit = current - 1;
         }
-    } else if status.is_success() && elapsed.as_millis() < 300
-        && current < 50 {
-            new_limit = current + 1;
-        }
+    } else if status.is_success() && elapsed.as_millis() < 300 && current < 50 {
+        new_limit = current + 1;
+    }
 
     if new_limit != current {
         limit.store(new_limit, std::sync::atomic::Ordering::SeqCst);
