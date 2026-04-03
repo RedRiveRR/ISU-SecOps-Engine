@@ -2,6 +2,13 @@
 
 Directory Bruteforcer projesindeki tüm önemli değişiklikler bu dosyada kayıt altına alınacaktır.
 
+## [v1.1.0] - 2026-04-03
+### Eklendi
+- **Deep Stealth Mode**: Güçlü WAF'ları (Cloudflare vb.) atlatabilmek için otonom *Contextual Blending* (zararsız araya kaynayan decoy istekler) ve hata durumunda 60 saniyelik *Cooldown* (soğuma) refleksleri motor seviyesine entegre edildi.
+- **Rotating Proxy Pool**: Sisteme tek bir proxy sunucusu yerine virgülle ayrılmış yüzlerce çoklu proxy tanımlanabilmesi sağlandı. İşçiler (workers) her asenkron istekte havuzdan IP rotasyonu yaparak kusursuz anonimlik sağlar.
+- **Düzeltme**: Yüksek hacimli taramalarda (10.000+ payload) arayüze veri sağlayan canlı SSE kanalının tıkanması ve taramayı askıda bırakması sorunu (Deadlock) çözüldü (`mpsc::channel` buffer artırıldı).
+- **Veri Dışa Aktarma (Export)**: Tarama sonuçlarını JSON ve CSV formatında kaydetme özelliği eklendi (`--output` / `-o`).
+
 ## [v1.0.0] - 2026-04-03
 ### Eklendi
 - **Genişletilmiş Parmak İzi**: Laravel, Django, GraphQL, Swagger ve CI/CD (Jenkins, GitLab) tespiti eklendi.
@@ -9,10 +16,6 @@ Directory Bruteforcer projesindeki tüm önemli değişiklikler bu dosyada kayı
 - **Daha Akıllı Tarama**: Statik örüntü listesine 50+ yeni kritik dosya yolu (api/health, .htaccess, artisan vb.) eklendi.
 - **Gelişmiş Web UI**: Sonuçlar ve loglar arasındaki SSE senkronizasyon hataları giderildi.
 - **Metadata Güncellemesi**: `Cargo.toml` üzerinden resmi proje açıklaması ve anahtar kelimeler eklendi.
-- **Deep Stealth Mode**: Güçlü WAF'ları (Cloudflare vb.) atlatabilmek için otonom *Contextual Blending* (zararsız araya kaynayan decoy istekler) ve hata durumunda 60 saniyelik *Cooldown* (soğuma) refleksleri motor seviyesine entegre edildi.
-- **Rotating Proxy Pool**: Sisteme tek bir proxy sunucusu yerine virgülle ayrılmış yüzlerce çoklu proxy tanımlanabilmesi sağlandı. İşçiler (workers) her asenkron istekte havuzdan IP rotasyonu yaparak kusursuz anonimlik sağlar.
-- **Düzeltme**: Yüksek hacimli taramalarda (10.000+ payload) arayüze veri sağlayan canlı SSE kanalının tıkanması ve taramayı askıda bırakması sorunu (Deadlock) çözüldü (`mpsc::channel` buffer artırıldı).
-- **Veri Dışa Aktarma (Export)**: Tarama sonuçlarını JSON ve CSV formatında kaydetme özelliği eklendi (`--output` / `-o`).
 
 ## [v0.7.0] - 2026-04-03
 ### Eklendi

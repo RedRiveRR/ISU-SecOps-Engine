@@ -1,6 +1,6 @@
 [package]
 name = "dirbrute"
-version = "1.0.0"
+version = "1.1.0"
 authors = ["Mert Kızılırmak <mertkzlrmk@yandex.ru>"]
 edition = "2024"
 description = "High-performance directory and file discovery tool with Web UI, recursive scanning, and technology fingerprinting."

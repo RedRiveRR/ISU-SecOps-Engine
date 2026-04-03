@@ -1,4 +1,4 @@
-# Directory Bruteforcer (dirbrute v1.0.0)
+# Directory Bruteforcer (dirbrute v1.1.0)
 
 ![Build Status](https://github.com/RedRiveRR/ISU-SecOps-Engine/actions/workflows/rust.yml/badge.svg)
 ![Rust Version](https://img.shields.io/badge/rust-1.75%2B-orange.svg)
@@ -14,7 +14,7 @@ Kullanım kolaylığı sağlayan iki güçlü arayüz ile birlikte gelir:
 1. **Komut Satırı Arayüzü (CLI)**: Terminal tutkunları için gerçek zamanlı hiyerarşik (ağaç yapısında) sonuç görüntüleme desteği sunar.
 2. **Modern Web Arayüzü**: Tamamen yerel (local) olarak çalışan; şık, karanlık temalı (dark mode) ve "glassmorphism" tasarım estetiğine sahip gelişmiş bir kontrol panelidir.
 
-## ✨ Yeni Nesil Özellikler (v1.0.0)
+## ✨ Yeni Nesil Özellikler (v1.1.0)
 
 - **Akıllı İçerik Analizi (Smart Content)**: Bulunan yolların sadece HTTP durum koduna bakmak yerine arka planda içeriğini (`<title>`) ve boyutunu (`Content-Length`) çıkararak olası yanlış pozitif (false-positive) durumlarını filtrelemenize yardımcı olur.
 - **Özyinelemeli (Recursive) Tarama**: Bulunan dizinlerin altına otomatik olarak inme yeteneği (örneğin `/admin` -> `/admin/config.php`).

@@ -90,7 +90,7 @@ pub async fn run_dirbrute(args: DirbruteArgs) {
         match event {
             ScanEvent::Start { target, total } => {
                 println!(
-                    "{} Starting Directory Bruteforcer for {}",
+                    "{} Starting Directory Bruteforcer (dirbrute v1.1.0) for {}",
                     "[*]".blue(),
                     target.bold()
                 );
@@ -215,7 +215,7 @@ pub async fn run_dirbrute_core(
                 continue;
             }
             let mut builder = reqwest::Client::builder()
-                .user_agent("dirbrute/1.0")
+                .user_agent("dirbrute/1.1.0")
                 .default_headers(header_map.clone())
                 .redirect(reqwest::redirect::Policy::none())
                 .timeout(Duration::from_secs(10));
@@ -231,7 +231,7 @@ pub async fn run_dirbrute_core(
 
     if clients.is_empty() {
         let builder = reqwest::Client::builder()
-            .user_agent("dirbrute/1.0")
+            .user_agent("dirbrute/1.1.0")
             .default_headers(header_map.clone())
             .redirect(reqwest::redirect::Policy::none())
             .timeout(Duration::from_secs(10));
