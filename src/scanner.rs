@@ -312,15 +312,14 @@ pub async fn run_dirbrute_core(args: DirbruteArgs, tx: mpsc::Sender<ScanEvent>) 
                                     if args_crawl && !body_text.is_empty() && (status.is_success() || matches!(status.as_u16(), 401 | 403)) {
                                         let links = extract_links(&body_text);
                                         let mut v = visited_clone.lock().await;
-                                            for link in links {
-                                                if let Some(normalized) = normalize_path(&link, &base_url_clone) {
-                                                    if v.insert(normalized.clone()) {
-                                                        let _ = tx_clone.send(ScanEvent::CrawlFound { 
-                                                            path: normalized.clone(), 
-                                                            source: path_clone.clone() 
-                                                        }).await;
-                                                        let _ = master_tx_clone.send(normalized).await;
-                                                    }
+                                        for link in links {
+                                            if let Some(normalized) = normalize_path(&link, &base_url_clone) {
+                                                if v.insert(normalized.clone()) {
+                                                    let _ = tx_clone.send(ScanEvent::CrawlFound { 
+                                                        path: normalized.clone(), 
+                                                        source: path_clone.clone() 
+                                                    }).await;
+                                                    let _ = master_tx_clone.send(normalized).await;
                                                 }
                                             }
                                         }

@@ -1,4 +1,4 @@
-# ISU SecOps Engine (v0.5.0)
+# ISU SecOps Engine (v0.6.0)
 
 ISU SecOps Engine, Rust ile yazılmış yüksek performanslı bir dizin ve dosya keşif (bruteforce) aracıdır. Web sunucularındaki gizli yolları eşzamanlı ağ istekleri yardımıyla son derece hızlı bir şekilde bulmak için tasarlanmıştır.
 
@@ -6,12 +6,13 @@ Kullanım kolaylığı sağlayan iki güçlü arayüz ile birlikte gelir:
 1. **Komut Satırı Arayüzü (CLI)**: Terminal tutkunları için, gerçek zamanlı hiyerarşik (ağaç yapısında) sonuç görüntüleme desteği sunar.
 2. **Modern Web Arayüzü**: Tamamen yerel (local) olarak çalışan, şık, karanlık temalı (dark mode) ve "glassmorphism" tasarım estetiğine sahip gelişmiş bir kontrol panelidir.
 
-## ✨ Yeni Nesil Özellikler (v0.5.0)
+## ✨ Yeni Nesil Özellikler (v0.6.0)
 
+- **Akıllı İçerik Analizi (Smart Content)**: Bulunan yolların sadece HTTP Status koduna bakmak yerine arka planda içeriğini (`<title>`) ve boyutunu (`Content-Length`) çıkararak olası false-positive durumlarını filtrelemenize yardımcı olur.
+- **Otomatik WAF Tespiti**: Sistem, hedefin bir WAF (Web Application Firewall) arkasında olduğunu veya Rate-Limiting uygulandığını sezdiğinde otomatik uyarı mekanizmasını tetikler.
 - **Akıllı Mod (Smart Mode)**: Dosya seçmekle uğraşmayın. Sistem, en yaygın kullanılan dizin ve dosyaları (admin, backup, .env vb.) otomatik olarak tarar.
 - **Adaptif İş Parçacığı (Adaptive Threading)**: Hedef sunucunun hızına göre otomatik vites artırır. Sunucu yavaşladığında veya hata verdiğinde sistem hızı düşürür, rahatladığında ise maksimum hıza çıkar.
 - **Işık Hızında**: Maksimum istek hızı için tamamen asenkron Rust (`tokio` ve `reqwest`) altyapısı üzerine inşa edilmiştir.
-- **Çift Arayüz (Dual Interface)**: Node.js gibi harici hiçbir sistem gereksinimi duymadan her iki arayüzü de kullanabilirsiniz.
 - **Gerçek Zamanlı Veri Akışı (SSE)**: Web arayüzü, arka planda tarama sürerken yeni keşfedilen adresleri ve güncel tarama hızını anında ekrana yansıtır.
 - **HTML Crawler**: Sayfa içerisindeki tüm dahili bağlantıları anlık olarak ayrıştırır ve otomatik olarak tarama kuyruğuna ekler. Dizin bruteforce ile ulaşılamayan yolları dinamik olarak keşfeder.
 

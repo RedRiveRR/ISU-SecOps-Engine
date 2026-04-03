@@ -2,6 +2,17 @@
 
 ISU SecOps Engine projesindeki tüm önemli değişiklikler bu dosyada kayıt altına alınacaktır.
 
+## [v0.6.0] - 2026-04-03
+### Eklendi
+- **Akıllı İçerik Analizi (Smart Content Analysis)**:
+    - Sırf HTTP durum kodlarına (`200 OK`) bakmak yerine yanıt içerikleri ayrıştırılarak sonuçların tutarlılığı artırıldı.
+    - Web sayfalarının `<title>` (Başlık) etkietleri `nipper` üzerinden otomatik ayıklanıp rapora eklendi.
+    - Yanıtların boyut bilgisi `Content-Length` (`L: xxxx` formatında) dinamik olarak UI ve CLI üzerinde görüntülenecek şekilde yapılandırıldı.
+- **Otomatik WAF (Web Application Firewall) Tespiti**:
+    - Kısa süre içerisinde yoğun `403 Forbidden` veya `429 Too Many Requests` hataları dönerse otomatik olarak güvenlik uyarısı veren bir sayaç eklendi.
+    - Web arayüzüne, hedefin WAF arkasında olduğunu belirten çıkıntılı uyarı banner'ı (toaster) kodlandı.
+- Proje sürümü `v0.6.0` olarak güncellendi.
+
 ## [v0.5.0] - 2026-04-03
 ### Eklendi
 - **Dahili HTML Crawler**:

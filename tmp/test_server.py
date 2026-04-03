@@ -25,6 +25,6 @@ class MockHandler(BaseHTTPRequestHandler):
         else:
             self.wfile.write(b"<html><head><title>Secret Found!</title></head><body>Found!</body></html>")
 
-httpd = HTTPServer(('127.0.0.1', 9999), MockHandler)
-print("Mock server running on http://127.0.0.1:9999")
+httpd = HTTPServer(('127.0.0.1', 9998), MockHandler)
+print("Mock server running on http://127.0.0.1:9998")
 httpd.serve_forever()
