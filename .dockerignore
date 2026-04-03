@@ -1,0 +1,13 @@
+target/
+.git/
+node_modules/
+*.log
+tmp/
+tests/
+.vscode/
+.idea/
+Cargo.lock
+Dockerfile
+.dockerignore
+common.txt
+reports/

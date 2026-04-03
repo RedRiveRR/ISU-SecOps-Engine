@@ -149,7 +149,7 @@ pub async fn run_dirbrute(args: DirbruteArgs) {
             ScanEvent::CrawlFound { path, source } => {
                 if args.show_logs {
                     println!(
-                        "{} [CRAWL] Discovered /{} (linked from /{})",
+                        "{} [CRAWL] Discovered /{} ({})",
                         "[+]".green(),
                         path,
                         source
@@ -440,21 +440,31 @@ pub async fn run_dirbrute_core(
                                 }
 
                                 // Crawler
-                                if args_crawl && depth < max_depth
-                                    && let Some(body) = body_text {
-                                        let links = extract_links(&body);
+                                if args_crawl && depth < max_depth && let Some(ref body) = body_text {
+                                    let findings = extract_metadata(body);
+                                    let mut v = visited_clone.lock().await;
+                                    for (path, source) in findings {
+                                        if let Some(normalized) = normalize_path(&path, &base_url_clone)
+                                            && v.insert(normalized.clone()) {
+                                                let _ = tx_clone.send(ScanEvent::CrawlFound {
+                                                    path: normalized,
+                                                    source
+                                                }).await;
+                                            }
+                                    }
+                                }
+
+                                // Suffix Probing (Smart Mode Extra)
+                                if args.auto_wordlist && !path_clone.contains('.') {
+                                    let suffixes = [".bak", ".old", ".txt", ".env", ".zip", ".tar.gz"];
+                                    for suffix in suffixes {
+                                        let probed = format!("{}{}", path_clone, suffix);
                                         let mut v = visited_clone.lock().await;
-                                        for link in links {
-                                            if let Some(normalized) = normalize_path(&link, &base_url_clone)
-                                                && v.insert(normalized.clone()) {
-                                                    let _ = tx_clone.send(ScanEvent::CrawlFound {
-                                                        path: normalized.clone(),
-                                                        source: path_clone.clone()
-                                                    }).await;
-                                                    let _ = master_tx_clone.send((normalized, depth + 1)).await;
-                                                }
+                                        if v.insert(probed.clone()) {
+                                            let _ = master_tx_clone.send((probed, 0)).await;
                                         }
                                     }
+                                }
                             }
                         }
                         let _ = done_tx_clone.send((found_result, path_clone)).await;
@@ -512,35 +522,159 @@ fn get_static_patterns() -> Vec<String> {
         "admin".into(),
         "administrator".into(),
         "login".into(),
+        "signin".into(),
+        "register".into(),
+        "signup".into(),
         "api".into(),
         "v1".into(),
         "v2".into(),
         "v3".into(),
+        "swagger".into(),
+        "docs".into(),
+        "api-docs".into(),
         "config".into(),
+        "configuration".into(),
+        "settings".into(),
         "setup".into(),
         "install".into(),
+        "update".into(),
         "backup".into(),
         "backups".into(),
         "old".into(),
         "new".into(),
+        "tmp".into(),
+        "temp".into(),
+        "dump".into(),
         "dev".into(),
         "development".into(),
         "staging".into(),
         "test".into(),
+        "testing".into(),
+        "demo".into(),
         ".env".into(),
+        ".env.local".into(),
+        ".env.test".into(),
+        ".env.example".into(),
+        ".env.production".into(),
         ".git".into(),
+        ".git/config".into(),
         ".gitignore".into(),
+        ".gitattributes".into(),
+        ".ssh".into(),
+        "id_rsa".into(),
+        "id_dsa".into(),
+        "id_ed25519".into(),
+        "authorized_keys".into(),
+        "credentials".into(),
         "docker-compose.yml".into(),
+        "Dockerfile".into(),
+        "docker-stack.yml".into(),
+        ".docker_env".into(),
         "server-status".into(),
         "phpinfo.php".into(),
+        "info.php".into(),
+        "status.php".into(),
+        "health".into(),
         "database.sql".into(),
+        "db.sql".into(),
+        "dump.sql".into(),
+        "backup.sql".into(),
+        "backup.tar.gz".into(),
         "wp-admin".into(),
         "wp-content".into(),
         "wp-includes".into(),
+        "wp-config.php".into(),
+        "wp-config.php.bak".into(),
         "node_modules".into(),
         "package.json".into(),
+        "package-lock.json".into(),
+        "yarn.lock".into(),
+        "npm-debug.log".into(),
         "public".into(),
         "private".into(),
+        "src".into(),
+        "app".into(),
+        "includes".into(),
+        "dist".into(),
+        "build".into(),
+        ".vscode".into(),
+        ".idea".into(),
+        "sftp.json".into(),
+        ".DS_Store".into(),
+        "web.config".into(),
+        "htaccess".into(),
+        "composer.json".into(),
+        "composer.lock".into(),
+        "vendor".into(),
+        "vendor/autoload.php".into(),
+        "bin".into(),
+        "scripts".into(),
+        "assets".into(),
+        "images".into(),
+        "uploads".into(),
+        "media".into(),
+        "auth".into(),
+        "authorize".into(),
+        "oauth".into(),
+        "token".into(),
+        "secret".into(),
+        "key".into(),
+        "aws".into(),
+        "s3".into(),
+        "bucket".into(),
+        "cloud".into(),
+        "metadata".into(),
+        "internal".into(),
+        "manage".into(),
+        "manager".into(),
+        "control".into(),
+        "panel".into(),
+        "dashboard".into(),
+        "console".into(),
+        "debug".into(),
+        "trace".into(),
+        "log".into(),
+        "logs".into(),
+        "error.log".into(),
+        "access.log".into(),
+        "mail".into(),
+        "email".into(),
+        "smtp".into(),
+        "webmail".into(),
+        "roundcube".into(),
+        "phpmyadmin".into(),
+        "robots.txt".into(),
+        "sitemap.xml".into(),
+        "crossdomain.xml".into(),
+        "clientaccesspolicy.xml".into(),
+        ".htaccess".into(),
+        ".htpasswd".into(),
+        ".ssh/id_rsa".into(),
+        ".ssh/id_dsa".into(),
+        "config/database.php".into(),
+        "artisan".into(),
+        "manage.py".into(),
+        "app.js".into(),
+        "main.js".into(),
+        "vendor.js".into(),
+        "bundle.js".into(),
+        "api/health".into(),
+        "api/status".into(),
+        "api/v1/health".into(),
+        "api/v1/status".into(),
+        "swagger-ui.html".into(),
+        "v2/api-docs".into(),
+        "v3/api-docs".into(),
+        "swagger.json".into(),
+        "graphql".into(),
+        "graphiql".into(),
+        "playground".into(),
+        ".gitlab-ci.yml".into(),
+        ".travis.yml".into(),
+        "circle.yml".into(),
+        "appveyor.yml".into(),
+        "Jenkinsfile".into(),
+        ".jenkins/config.xml".into(),
     ]
 }
 
@@ -557,6 +691,16 @@ fn get_fingerprints() -> Vec<(&'static str, &'static str)> {
         ("web.config", "IIS / ASP.NET"),
         ("docker-compose.yml", "Docker"),
         ("database.sql", "SQL Database Dump"),
+        ("artisan", "Laravel"),
+        ("manage.py", "Django"),
+        ("app.js", "Node.js Frontend"),
+        ("vendor.js", "Frontend Framework"),
+        (".jenkins", "Jenkins CI"),
+        (".gitlab-ci.yml", "GitLab CI"),
+        ("swagger-ui", "Swagger API"),
+        ("graphql", "GraphQL API"),
+        (".env", "Environment Variables"),
+        ("wp-admin", "WordPress"),
     ]
 }
 
@@ -641,15 +785,44 @@ fn print_real_tree(base_url: &str, results: &[ScanResult]) {
     );
 }
 
-fn extract_links(html: &str) -> Vec<String> {
-    let mut links = Vec::new();
+fn extract_metadata(html: &str) -> Vec<(String, String)> {
+    let mut findings = Vec::new();
     let doc = Document::from(html);
-    for el in doc.select("a").iter() {
-        if let Some(href) = el.attr("href") {
-            links.push(href.to_string());
+
+    // 1. Tags with paths (Links, Scripts, Images, Forms)
+    let selectors = [
+        ("a", "href", "Link"),
+        ("script", "src", "Script"),
+        ("img", "src", "Image"),
+        ("link", "href", "Style/Asset"),
+        ("form", "action", "Form Action"),
+    ];
+
+    for (tag, attr, source) in selectors {
+        for el in doc.select(tag).iter() {
+            if let Some(val) = el.attr(attr) {
+                findings.push((val.to_string(), source.to_string()));
+            }
         }
     }
-    links
+
+    // 2. HTML Comments
+    // We use a simple regex approach for comments as nipper is primarily for tags
+    use regex::Regex;
+    let comment_regex = Regex::new(r"(?s)<!--(.*?)-->").unwrap();
+    let path_regex = Regex::new(r"(/[a-zA-Z0-9._\-/]+)").unwrap();
+
+    for cap in comment_regex.captures_iter(html) {
+        let comment = cap[1].trim();
+        if !comment.is_empty() {
+            // Find potential paths inside comments
+            for path_cap in path_regex.captures_iter(comment) {
+                findings.push((path_cap[1].to_string(), "Comment".into()));
+            }
+        }
+    }
+
+    findings
 }
 
 fn normalize_path(path: &str, base_url: &str) -> Option<String> {

@@ -1,4 +1,4 @@
-# Directory Bruteforcer (v0.8.0)
+# Directory Bruteforcer (dirbrute v1.0.0)
 
 ![Build Status](https://github.com/RedRiveRR/ISU-SecOps-Engine/actions/workflows/rust.yml/badge.svg)
 ![Rust Version](https://img.shields.io/badge/rust-1.75%2B-orange.svg)

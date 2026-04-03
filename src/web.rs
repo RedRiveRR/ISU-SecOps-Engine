@@ -1,44 +1,39 @@
 use axum::{
-    Json, Router,
+    Json,
     extract::{Path, State},
-    response::{
-        Html,
-        sse::{Event, Sse},
-    },
-    routing::{get, post},
+    response::sse::{Event, Sse},
 };
 use serde::{Deserialize, Serialize};
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::{collections::HashMap, convert::Infallible, sync::Arc};
+use std::collections::HashMap;
+use std::convert::Infallible;
+use std::sync::Arc;
 use tokio::sync::{Mutex, mpsc};
 use tokio_stream::StreamExt;
 use tokio_stream::wrappers::ReceiverStream;
+use uuid::Uuid;
 
 use crate::cli::DirbruteArgs;
 use crate::scanner::{ScanEvent, run_dirbrute_core};
 
-static INDEX_HTML: &str = include_str!("../ui/index.html");
-static STREAM_ID_COUNTER: AtomicUsize = AtomicUsize::new(1);
-
 #[derive(Clone)]
 pub struct AppState {
-    streams: Arc<Mutex<HashMap<String, mpsc::Receiver<ScanEvent>>>>,
+    pub streams: Arc<Mutex<HashMap<String, mpsc::Receiver<ScanEvent>>>>,
 }
 
 #[derive(Deserialize)]
 pub struct ScanRequest {
-    url: String,
-    wordlist: Option<String>,
-    threads: Option<usize>,
-    auto_wordlist: Option<bool>,
-    auto_threads: Option<bool>,
-    crawler: Option<bool>,
-    depth: Option<usize>,
+    pub url: String,
+    pub wordlist: Option<String>,
+    pub threads: usize,
+    pub auto_wordlist: bool,
+    pub auto_threads: bool,
+    pub crawler: bool,
+    pub depth: usize,
 }
 
 #[derive(Serialize)]
 pub struct ScanResponse {
-    stream_id: String,
+    pub stream_id: String,
 }
 
 pub async fn start_server(port: u16) {
@@ -46,56 +41,51 @@ pub async fn start_server(port: u16) {
         streams: Arc::new(Mutex::new(HashMap::new())),
     };
 
-    let app = Router::new()
-        .route("/", get(serve_ui))
-        .route("/api/scan", post(start_scan))
-        .route("/api/scan/stream/{id}", get(scan_stream))
+    let app = axum::Router::new()
+        .route("/api/scan", axum::routing::post(start_scan))
+        .route("/api/scan/stream/{id}", axum::routing::get(scan_stream))
+        .fallback(axum::routing::get_service(
+            tower_http::services::ServeDir::new("ui"),
+        ))
         .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", port))
-        .await
-        .unwrap();
-
+    let addr = format!("127.0.0.1:{}", port);
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     println!("[*] Web UI is running!");
-    println!("[*] Open http://127.0.0.1:{} in your browser.", port);
-
+    println!("[*] Open http://{} in your browser.", addr);
     axum::serve(listener, app).await.unwrap();
-}
-
-async fn serve_ui() -> Html<&'static str> {
-    Html(INDEX_HTML)
 }
 
 async fn start_scan(
     State(state): State<AppState>,
     Json(payload): Json<ScanRequest>,
-) -> Result<Json<ScanResponse>, axum::http::StatusCode> {
+) -> Result<Json<ScanResponse>, Infallible> {
+    let (tx, rx) = mpsc::channel(100);
+    let stream_id = Uuid::new_v4().to_string();
+
+    {
+        let mut streams = state.streams.lock().await;
+        streams.insert(stream_id.clone(), rx);
+    }
+
     let args = DirbruteArgs {
         url: payload.url,
         wordlist: payload.wordlist,
-        threads: payload.threads.unwrap_or(10),
+        threads: payload.threads,
         headers: vec![],
         cookie: None,
-        auto_wordlist: payload.auto_wordlist.unwrap_or(false),
-        auto_threads: payload.auto_threads.unwrap_or(false),
-        show_logs: false,
-        crawler: payload.crawler.unwrap_or(false),
-        depth: payload.depth.unwrap_or(1),
+        auto_wordlist: payload.auto_wordlist,
+        auto_threads: payload.auto_threads,
+        depth: payload.depth,
+        show_logs: true,
+        crawler: payload.crawler,
         output: None,
         format: None,
     };
 
-    let (tx, rx) = mpsc::channel(5000);
-
-    // Spawn scanner in background
     tokio::spawn(async move {
         let _ = run_dirbrute_core(args, tx).await;
     });
-
-    let stream_id = format!("scan_{}", STREAM_ID_COUNTER.fetch_add(1, Ordering::SeqCst));
-
-    let mut streams = state.streams.lock().await;
-    streams.insert(stream_id.clone(), rx);
 
     Ok(Json(ScanResponse { stream_id }))
 }
@@ -109,15 +99,16 @@ async fn scan_stream(
         streams.remove(&id)
     };
 
+    let (tx_err, rx_final) = mpsc::channel(10);
+
     let stream = match rx {
         Some(r) => ReceiverStream::new(r),
         None => {
-            // Cannot find stream, returning immediate finish event
-            let (tx, empty_rx) = mpsc::channel(1);
-            let _ = tx.blocking_send(ScanEvent::Error {
+            // Cannot find stream, returning error inside the stream to be async safe
+            let _ = tx_err.try_send(ScanEvent::Error {
                 message: "Stream not found or already consumed.".to_string(),
             });
-            ReceiverStream::new(empty_rx)
+            ReceiverStream::new(rx_final)
         }
     };
 

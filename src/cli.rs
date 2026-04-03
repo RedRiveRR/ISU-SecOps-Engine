@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
 #[command(name = "dirbrute")]
-#[command(about = "Directory Bruteforcer CLI", version = "0.7.0")]
+#[command(about = "Directory Bruteforcer CLI", version)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,

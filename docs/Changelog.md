@@ -2,12 +2,13 @@
 
 Directory Bruteforcer projesindeki tüm önemli değişiklikler bu dosyada kayıt altına alınacaktır.
 
-## [v0.8.0] - 2026-04-03
-### Değiştirildi
-- **Yeniden Markalama**: Proje adı "ISU SecOps Engine" yerine "**Directory Bruteforcer**" (`dirbrute`) olarak değiştirildi.
-- **Yazar Bilgisi**: Metadata ve lisans bilgileri "Mert Kızılırmak (RedRiveRR)" olarak güncellendi.
-- **README Tasarımı**: Proje dokümantasyonu premium rozetler (rebuild status, rust version, platform, license vb.) ile zenginleştirildi.
+## [v1.0.0] - 2026-04-03
 ### Eklendi
+- **Genişletilmiş Parmak İzi**: Laravel, Django, GraphQL, Swagger ve CI/CD (Jenkins, GitLab) tespiti eklendi.
+- **Docker Desteği**: Projenin konteynerize edilip hızlıca konuşlandırılması için çok aşamalı `Dockerfile` eklendi.
+- **Daha Akıllı Tarama**: Statik örüntü listesine 50+ yeni kritik dosya yolu (api/health, .htaccess, artisan vb.) eklendi.
+- **Gelişmiş Web UI**: Sonuçlar ve loglar arasındaki SSE senkronizasyon hataları giderildi.
+- **Metadata Güncellemesi**: `Cargo.toml` üzerinden resmi proje açıklaması ve anahtar kelimeler eklendi.
 - **Veri Dışa Aktarma (Export)**: Tarama sonuçlarını JSON ve CSV formatında kaydetme özelliği eklendi (`--output` / `-o`).
 
 ## [v0.7.0] - 2026-04-03

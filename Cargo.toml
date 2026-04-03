@@ -1,8 +1,13 @@
 [package]
 name = "dirbrute"
-version = "0.7.0"
+version = "1.0.0"
 authors = ["Mert Kızılırmak <mertkzlrmk@yandex.ru>"]
 edition = "2024"
+description = "High-performance directory and file discovery tool with Web UI, recursive scanning, and technology fingerprinting."
+repository = "https://github.com/RedRiveRR/ISU-SecOps-Engine"
+license = "MIT"
+keywords = ["pentest", "security", "bruteforce", "scanner", "discovery"]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
@@ -16,4 +21,7 @@ serde_json = "1.0.149"
 serde = { version = "1.0.228", features = ["derive"] }
 nipper = "0.1.9"
 csv = "1.3"
+regex = "1.10"
+uuid = { version = "1.8", features = ["v4", "serde"] }
+tower-http = { version = "0.5", features = ["fs"] }
 

@@ -384,7 +384,7 @@
                 <span class="status-dot" id="dot"></span>
                 <span id="status_text">OFFLINE</span>
             </div>
-            <div style="font-size: 13px; color: var(--text-muted); font-weight: 500;">v0.8.0 &middot; Brute Engine</div>
+            <div style="font-size: 13px; color: var(--text-muted); font-weight: 500;">v1.0.0 &middot; Brute Engine</div>
         </div>
     </header>
 
@@ -561,16 +561,40 @@
                 } else if (data.event === "WafWarning") {
                     document.getElementById('waf_warning').style.display = 'flex';
                     document.getElementById('waf_warning_text').innerText = data.message;
+                } else if (data.event === "CrawlFound") {
+                    const container = document.getElementById('crawler_container');
+                    if (![...container.children].some(el => el.dataset.path === data.path)) {
+                        const el = document.createElement('div');
+                        el.className = 'log-line';
+                        el.dataset.path = data.path;
+                        let icon = "🔗";
+                        let color = "var(--primary)";
+                        if (data.source === "Comment") { icon = "💬"; color = "var(--warning)"; }
+                        else if (data.source === "Script") { icon = "📜"; color = "var(--success)"; }
+                        else if (data.source === "Image") { icon = "🖼️"; color = "var(--text-muted)"; }
+
+                        el.innerHTML = `
+                            <div style="display:flex; flex-direction:column;">
+                                <span style="font-weight:600;">/${data.path}</span>
+                                <span style="font-size:10px; color:${color}; font-weight:bold;">${icon} ${data.source}</span>
+                            </div>
+                        `;
+                        container.appendChild(el);
+                        document.getElementById('crawler_tab').scrollTop = document.getElementById('crawler_tab').scrollHeight;
+                    }
                 } else if (data.event === "Attempt") {
+                    const logsContainer = document.getElementById('logs_container');
                     const el = document.createElement('div');
-                    el.className = `log-entry ${data.is_interesting ? 'interesting' : ''}`;
-                    el.innerHTML = `<span>TRY</span> <span style="margin-left:4px;">/${data.path}</span> <span style="float:right; font-weight:bold; color: ${data.is_interesting ? 'var(--success)' : 'var(--danger)'}">${data.status}</span>`;
-                    const container = document.getElementById('logs_container');
-                    container.appendChild(el);
-                    if (container.children.length > 300) container.removeChild(container.firstChild);
-                    document.getElementById('logs_tab').scrollTop = document.getElementById('logs_tab').scrollHeight;
+                    el.className = 'log-entry' + (data.is_interesting ? ' interesting' : '');
+                    el.innerText = `[${data.status}] /${data.path}`;
+                    logsContainer.appendChild(el);
+                    // Auto-scroll logs
+                    if (document.getElementById('logs_tab').classList.contains('active')) {
+                        document.getElementById('logs_tab').scrollTop = document.getElementById('logs_tab').scrollHeight;
+                    }
                 } else if (data.event === "Found") {
                     const res = data.result;
+                    const resultsContainer = document.getElementById('results_container');
                     const el = document.createElement('div');
                     el.className = 'log-line';
                     el.innerHTML = `
@@ -580,7 +604,7 @@
                         </div>
                         <span class="status-badge ${getStatusClass(res.status)}">${res.status}</span>
                     `;
-                    document.getElementById('results_container').appendChild(el);
+                    resultsContainer.appendChild(el);
                 } else if (data.event === "Finished") {
                     document.getElementById('progress_text').innerText = `Completed. Found ${data.total_found}.`;
                     scanFinished(true);
