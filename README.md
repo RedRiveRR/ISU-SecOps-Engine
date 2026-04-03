@@ -1,4 +1,4 @@
-# ISU SecOps Engine (v0.6.0)
+# ISU SecOps Engine (v0.7.0)
 
 ISU SecOps Engine, Rust ile yazılmış yüksek performanslı bir dizin ve dosya keşif (bruteforce) aracıdır. Web sunucularındaki gizli yolları eşzamanlı ağ istekleri yardımıyla son derece hızlı bir şekilde bulmak için tasarlanmıştır.
 
@@ -9,6 +9,9 @@ Kullanım kolaylığı sağlayan iki güçlü arayüz ile birlikte gelir:
 ## ✨ Yeni Nesil Özellikler (v0.6.0)
 
 - **Akıllı İçerik Analizi (Smart Content)**: Bulunan yolların sadece HTTP Status koduna bakmak yerine arka planda içeriğini (`<title>`) ve boyutunu (`Content-Length`) çıkararak olası false-positive durumlarını filtrelemenize yardımcı olur.
+- **Yeniden Yinelemeli (Recursive) Taraman**: Bulunan dizinlerin altına otomatik olarak inme yeteneği (örneğin `/admin` -> `/admin/config.php`).
+- **Teknoloji Parmak İzi (Fingerprinting)**: Hedefteki yazılım yığınını (WordPress, Node.js, PHP, Docker vb.) otomatik olarak teşhis eder ve görsel rozetlerle gösterir.
+- **Soft-404 Heuristic Filtresi**: Sunucunun rastgele yollara `200 OK` döndürdüğü (false-positive) durumları "Heuristic Calibration" ile anında tespit eder ve temiz veri sunar.
 - **Otomatik WAF Tespiti**: Sistem, hedefin bir WAF (Web Application Firewall) arkasında olduğunu veya Rate-Limiting uygulandığını sezdiğinde otomatik uyarı mekanizmasını tetikler.
 - **Akıllı Mod (Smart Mode)**: Dosya seçmekle uğraşmayın. Sistem, en yaygın kullanılan dizin ve dosyaları (admin, backup, .env vb.) otomatik olarak tarar.
 - **Adaptif İş Parçacığı (Adaptive Threading)**: Hedef sunucunun hızına göre otomatik vites artırır. Sunucu yavaşladığında veya hata verdiğinde sistem hızı düşürür, rahatladığında ise maksimum hıza çıkar.

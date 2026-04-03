@@ -2,16 +2,25 @@
 
 ISU SecOps Engine projesindeki tüm önemli değişiklikler bu dosyada kayıt altına alınacaktır.
 
+## [v0.7.0] - 2026-04-03
+### Eklendi
+- **Soft-404 Heuristic Filter**: 
+    - "Dinamik Kalibrasyon" motoru eklendi. Tarama öncesi otomatik olarak `/ISU-SecOps-Heuristic-404-Test` yoluna istek atılarak sunucunun hata sayfası boyutu belirlenir.
+    - Sahte 200 dönen sistemler için baseline karşılaştırmalı akıllı filtreleme getirildi.
+- **Teknoloji Parmak İzi (Technology Fingerprinting)**:
+    - Bulunan yollar üzerinden (WordPress, Node.js, Docker, PHP vb.) altyapı tespiti yapan motor entegre edildi.
+    - Web UI üzerinde mor animasyonlu "Tech Badge" rozetleri eklendi.
+- **Restorasyon ve Verimlilik**: Web UI v0.7.0 seviyesine yükseltildi, eksik tüm bileşenler geri yüklendi.
+
 ## [v0.6.0] - 2026-04-03
 ### Eklendi
+- **Yeniden Yinelemeli (Recursive) Keşif**: 
+    - Bulunan her dizinin altına otomatik olarak dalan derinlikli tarama motoru eklendi.
+    - `--depth` (Web API: `depth`) parametresi ile tarama derinliği kontrol edilebilir hale getirildi.
 - **Akıllı İçerik Analizi (Smart Content Analysis)**:
-    - Sırf HTTP durum kodlarına (`200 OK`) bakmak yerine yanıt içerikleri ayrıştırılarak sonuçların tutarlılığı artırıldı.
-    - Web sayfalarının `<title>` (Başlık) etkietleri `nipper` üzerinden otomatik ayıklanıp rapora eklendi.
-    - Yanıtların boyut bilgisi `Content-Length` (`L: xxxx` formatında) dinamik olarak UI ve CLI üzerinde görüntülenecek şekilde yapılandırıldı.
-- **Otomatik WAF (Web Application Firewall) Tespiti**:
-    - Kısa süre içerisinde yoğun `403 Forbidden` veya `429 Too Many Requests` hataları dönerse otomatik olarak güvenlik uyarısı veren bir sayaç eklendi.
-    - Web arayüzüne, hedefin WAF arkasında olduğunu belirten çıkıntılı uyarı banner'ı (toaster) kodlandı.
-- Proje sürümü `v0.6.0` olarak güncellendi.
+    - HTML `<title>` ve `Content-Length` bilgileri rapora eklendi.
+- **Otomatik WAF Tespiti**:
+    - `403/429` hataları üzerinden WAF sezgileme ve kullanıcıyı uyarma sistemi kuruldu.
 
 ## [v0.5.0] - 2026-04-03
 ### Eklendi
