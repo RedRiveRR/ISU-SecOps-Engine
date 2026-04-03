@@ -1,4 +1,25 @@
+# Rust / Cargo
 /target
-*.txt
+Cargo.lock
+
+# IDEs
+.idea/
+.vs/
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/settings.json
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs / Reports
+/reports/*
+!/reports/.gitkeep
+*.log
+
+# Project specific
+common.txt
 !common.txt
-assets/reports/

@@ -1,4 +1,7 @@
-.PHONY: build test run fmt clippy clean
+.PHONY: build test run fmt lint audit ci clean help
+
+# Default target
+_default: help
 
 # Build the project
 build:
@@ -13,16 +16,27 @@ fmt:
 	cargo fmt
 
 # Run clippy for linting
-clippy:
-	cargo clippy --all-targets --all-features -- -D warnings
+lint:
+	cargo clippy --all-targets -- -D warnings
 
-# Run the project in development mode
-run:
-	cargo run -- $(ARGS)
+# Run security audit
+audit:
+	cargo deny check
+
+# Run full local CI check
+ci: fmt lint audit test build
 
 # Clean build artifacts
 clean:
 	cargo clean
 
-# Standard CI check for developers
-check: fmt clippy test build
+# Show help
+help:
+	@echo "Aviable commands:"
+	@echo "  make build    - Build the project"
+	@echo "  make test     - Run tests"
+	@echo "  make fmt      - Format the code"
+	@echo "  make lint     - Run clippy (strict)"
+	@echo "  make audit    - Run security audit"
+	@echo "  make ci       - Run all checks (fmt, lint, audit, test, build)"
+	@echo "  make clean    - Clean target directory"

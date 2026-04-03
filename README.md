@@ -96,7 +96,29 @@ Proje, yazılım mühendisliği standartlarına uygun olarak geliştirilmektedir
 - **Strict Linting**: `cargo clippy` ile statik kod analizi ve en iyi pratikler zorunlu tutulur.
 - **Otomatik Formatlama**: `cargo fmt` ile kod tabanı standart Rust stilindedir.
 - **CI/CD**: Her push işleminde GitHub Actions üzerinde `cargo test` ve `cargo build` otomatik olarak çalıştırılır.
-- **Just/Makefile**: Sık kullanılan komutlar bir `Makefile` ile standartlaştırılmıştır (`make build`, `make test`, `make lint`).
+- **Geliştirici Araçları**: Proje, `Justfile` ve `.vscode` yapılandırmaları ile tam otomatize edilmiştir.
+
+## 🛠️ Geliştirici Rehberi
+
+Projenin geliştirilmesine katkıda bulunmak veya yerel ortamda özelleştirmek için aşağıdaki araçlar hazırlandı:
+
+### 1. VS Code Entegrasyonu
+Proje, `.vscode` klasörü altında tam kapsamlı yapılandırmalarla gelir:
+- **Otomasyon (tasks.json)**: `Build`, `Lint` ve `Test` görevleri tanımlıdır (Ctrl+Shift+B).
+- **Hata Ayıklama (launch.json)**: LLDB ile hem ana programı hem de testleri adım adım debug edebilirsiniz (F5).
+- **Önerilen Eklentiler (extensions.json)**: Açılışta `rust-analyzer`, `CodeLLDB` ve `Even Better TOML` gibi kritik eklentiler önerilir.
+
+### 2. Komut Çalıştırıcı (Just / Makefile)
+Sık kullanılan operasyonlar için `Justfile` (veya `Makefile`) kullanabilirsiniz:
+- `just fmt`: Tüm kodu ve TOML dosyalarını formatlar.
+- `just lint`: Clippy ile katı kuralları denetler.
+- `just audit`: `cargo-deny` ile güvenlik ve lisans denetimi yapar.
+- `just ci`: Tüm dokunulmazlık testlerini (`fmt`, `lint`, `audit`, `test`) tek seferde koşturur.
+
+### 3. Güvenlik Denetimi
+Proje, `deny.toml` yapılandırması ile tedarik zinciri güvenliğini önceler:
+- Zafiyet barındıran paketler (`advisories`) otomatik olarak engellenir.
+- Uyumsuz lisanslar (Copyleft vb.) reddedilir.
 
 ## Dokümantasyon
 
