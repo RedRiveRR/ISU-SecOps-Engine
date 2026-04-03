@@ -17,53 +17,87 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::sync::Mutex;
 use tokio::sync::mpsc;
 
+/// Represents a single discovery result from the scanner.
 #[derive(Debug, Clone, Serialize)]
 pub struct ScanResult {
+    /// The discovered path (e.g. /admin).
     pub path: String,
+    /// HTTP status code (e.g. 200, 301, 403).
     pub status: u16,
+    /// Content length in bytes.
     pub length: u64,
+    /// Page title extracted from the HTML <title> tag.
     pub title: Option<String>,
 }
 
+/// Enumeration of events emitted by the scanner during its lifecycle.
+/// Used for real-time communication with CLI and Web UI.
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "event")]
 pub enum ScanEvent {
+    /// Dispatched when the scan starts.
     Start {
+        /// Fully qualified target URL.
         target: String,
+        /// Total number of paths to be tested.
         total: usize,
     },
+    /// Dispatched when a relevant directory or file is found.
     Found {
+        /// The result data.
         result: ScanResult,
     },
+    /// Dispatched when a critical error occurs (e.g. network lost).
     Error {
+        /// The error message.
         message: String,
     },
+    /// Dispatched when the entire scan process completes.
     Finished {
+        /// Total number of interesting results discovered.
         total_found: usize,
     },
+    /// Dispatched when adaptive threading changes the concurrency level.
     ConcurrencyUpdate {
+        /// New number of concurrent workers.
         current: usize,
     },
+    /// Dispatched for every request attempt (for live logging).
     Attempt {
+        /// The path being tested.
         path: String,
+        /// HTTP status code received.
         status: u16,
+        /// Whether the result is considered "interesting" (non-404).
         is_interesting: bool,
     },
+    /// Dispatched when the HTML Crawler finds a new internal link.
     CrawlFound {
+        /// The discovered path.
         path: String,
+        /// Where the link was found (source page).
         source: String,
     },
+    /// Dispatched when a WAF (Web App Firewall) detection occurs.
     WafWarning {
+        /// Descriptive warning message.
         message: String,
     },
+    /// Dispatched when a specific technology (e.g. WordPress) is detected.
     TechFound {
+        /// Name of the detected technology.
         name: String,
     },
+    /// Dispatched when a Soft-404 false positive is identified.
     Soft404 {
+        /// HTTP status code returned (usually 200).
         status: u16,
+        /// Body length used for filtering.
         length: u64,
     },
+    /// Status update for the Deep Stealth system.
     StealthStatus {
+        /// Information message (e.g. "Starting cool-down").
         message: String,
     },
 }
@@ -76,6 +110,8 @@ struct TreeNode {
     children: BTreeMap<String, TreeNode>,
 }
 
+/// Public Entry Point: Runs the directory bruteforcer with the provided arguments.
+/// Manages both the CLI output and the async execution core.
 pub async fn run_dirbrute(args: DirbruteArgs) {
     let (tx, mut rx) = mpsc::channel(5000);
 
@@ -184,6 +220,8 @@ pub async fn run_dirbrute(args: DirbruteArgs) {
     let _ = scan_handle.await;
 }
 
+/// Core execution engine for the directory bruteforcer.
+/// Handles async requests, concurrency management, and event broadcasting.
 pub async fn run_dirbrute_core(
     args: DirbruteArgs,
     tx: mpsc::Sender<ScanEvent>,
@@ -235,7 +273,18 @@ pub async fn run_dirbrute_core(
             .default_headers(header_map.clone())
             .redirect(reqwest::redirect::Policy::none())
             .timeout(Duration::from_secs(10));
-        clients.push(builder.build().expect("Failed to build HTTP client"));
+
+        match builder.build() {
+            Ok(client) => clients.push(client),
+            Err(e) => {
+                let _ = tx
+                    .send(ScanEvent::Error {
+                        message: format!("HTTP Client could not be initialized: {}", e),
+                    })
+                    .await;
+                return Ok(vec![]);
+            }
+        }
     }
 
     let clients_arc = Arc::new(clients);
@@ -412,13 +461,9 @@ pub async fn run_dirbrute_core(
                             let _ = clients[decoy_client_idx].get(&decoy_url).send().await;
                         }
 
-                        // --- Integrated WAF Evasion & Stealth ---
-                        // 1. Micro-Jitter (to prevent time-based heuristic blocking)
+                        // Jitter to evade simple timing-based heuristics
                         tokio::time::sleep(tokio::time::Duration::from_millis(jitter)).await;
 
-                        // 2. Randomized IP Spoofing Headers
-
-                        // 3. Realistic User-Agent Rotation
                         let user_agents = [
                             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
                             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
@@ -520,9 +565,11 @@ pub async fn run_dirbrute_core(
 
                             if is_truly_interesting
                                 && let Some((base_status, base_len)) = *soft_404_baseline
-                                    && status.as_u16() == base_status && length == base_len {
-                                        is_truly_interesting = false;
-                                    }
+                                && status.as_u16() == base_status
+                                && length == base_len
+                            {
+                                is_truly_interesting = false;
+                            }
 
                             let _ = tx_clone.send(ScanEvent::Attempt {
                                 path: path_clone.clone(),
@@ -557,12 +604,13 @@ pub async fn run_dirbrute_core(
                                     let mut v = visited_clone.lock().await;
                                     for (path, source) in findings {
                                         if let Some(normalized) = normalize_path(&path, &base_url_clone)
-                                            && v.insert(normalized.clone()) {
-                                                let _ = tx_clone.send(ScanEvent::CrawlFound {
-                                                    path: normalized,
-                                                    source
-                                                }).await;
-                                            }
+                                            && v.insert(normalized.clone())
+                                        {
+                                            let _ = tx_clone.send(ScanEvent::CrawlFound {
+                                                path: normalized,
+                                                source
+                                            }).await;
+                                        }
                                     }
                                 }
 
@@ -600,6 +648,7 @@ pub async fn run_dirbrute_core(
     Ok(results_vec)
 }
 
+/// Internal logic to handle adaptive concurrency based on server response and latency.
 async fn adjust_concurrency(
     status: reqwest::StatusCode,
     elapsed: Duration,
@@ -629,6 +678,7 @@ async fn adjust_concurrency(
     }
 }
 
+/// Returns the built-in static wordlist patterns for smart discovery.
 fn get_static_patterns() -> Vec<String> {
     vec![
         "admin".into(),
@@ -790,6 +840,7 @@ fn get_static_patterns() -> Vec<String> {
     ]
 }
 
+/// Returns a list of known file/path signatures for technology fingerprinting.
 fn get_fingerprints() -> Vec<(&'static str, &'static str)> {
     vec![
         ("wp-admin", "WordPress"),
@@ -816,11 +867,13 @@ fn get_fingerprints() -> Vec<(&'static str, &'static str)> {
     ]
 }
 
+/// Determines if an HTTP status code is worth reporting to the user.
 fn is_interesting_status(status: StatusCode) -> bool {
     let code = status.as_u16();
     matches!(code, 200..=204 | 301..=302 | 307..=308 | 401 | 403 | 500)
 }
 
+/// Internal recursive function to build a hierarchical tree from a flat list of results.
 fn build_tree(results: &[ScanResult]) -> TreeNode {
     let mut root = TreeNode::default();
     for res in results {
@@ -847,6 +900,7 @@ fn build_tree(results: &[ScanResult]) -> TreeNode {
     root
 }
 
+/// Renders the scan results as a professional terminal-based tree.
 fn print_real_tree(base_url: &str, results: &[ScanResult]) {
     let root_node = build_tree(results);
     fn format_node(name: &str, node: &TreeNode, prefix: &str, is_last: bool) {
@@ -897,6 +951,7 @@ fn print_real_tree(base_url: &str, results: &[ScanResult]) {
     );
 }
 
+/// Parsers HTML content to extract potential discovery paths (links, scripts, comments).
 fn extract_metadata(html: &str) -> Vec<(String, String)> {
     let mut findings = Vec::new();
     let doc = Document::from(html);
@@ -919,7 +974,6 @@ fn extract_metadata(html: &str) -> Vec<(String, String)> {
     }
 
     // 2. HTML Comments
-    // We use a simple regex approach for comments as nipper is primarily for tags
     use regex::Regex;
     let comment_regex = Regex::new(r"(?s)<!--(.*?)-->").unwrap();
     let path_regex = Regex::new(r"(/[a-zA-Z0-9._\-/]+)").unwrap();
@@ -927,7 +981,6 @@ fn extract_metadata(html: &str) -> Vec<(String, String)> {
     for cap in comment_regex.captures_iter(html) {
         let comment = cap[1].trim();
         if !comment.is_empty() {
-            // Find potential paths inside comments
             for path_cap in path_regex.captures_iter(comment) {
                 findings.push((path_cap[1].to_string(), "Comment".into()));
             }
@@ -937,6 +990,7 @@ fn extract_metadata(html: &str) -> Vec<(String, String)> {
     findings
 }
 
+/// Converts relative paths and absolute-internal URLs into clean, relative paths.
 fn normalize_path(path: &str, base_url: &str) -> Option<String> {
     if path.starts_with("http") {
         if path.starts_with(base_url) {
@@ -957,6 +1011,7 @@ fn normalize_path(path: &str, base_url: &str) -> Option<String> {
     Some(path.to_string())
 }
 
+/// Serializes and persists scan results to the local filesystem (JSON/CSV).
 fn save_results(
     path: &str,
     format: &Option<String>,
@@ -994,4 +1049,45 @@ fn save_results(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_static_patterns_content() {
+        let patterns = get_static_patterns();
+        assert!(patterns.contains(&".env".to_string()));
+        assert!(patterns.contains(&"wp-admin".to_string()));
+        assert!(patterns.len() > 100);
+    }
+
+    #[test]
+    fn test_scan_result_serialization() {
+        let result = ScanResult {
+            path: "/admin".to_string(),
+            status: 200,
+            length: 1234,
+            title: Some("Admin Login".to_string()),
+        };
+        let json = serde_json::to_string(&result).unwrap();
+        assert!(json.contains("\"path\":\"/admin\""));
+        assert!(json.contains("\"status\":200"));
+    }
+
+    #[test]
+    fn test_normalize_path() {
+        let base = "https://example.com";
+        assert_eq!(normalize_path("/admin", base), Some("admin".to_string()));
+        assert_eq!(
+            normalize_path("config.php", base),
+            Some("config.php".to_string())
+        );
+        assert_eq!(
+            normalize_path("https://example.com/internal", base),
+            Some("internal".to_string())
+        );
+        assert_eq!(normalize_path("https://extern.com", base), None);
+    }
 }

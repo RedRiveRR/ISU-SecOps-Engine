@@ -52,10 +52,20 @@ pub async fn start_server(port: u16) {
         .with_state(state);
 
     let addr = format!("127.0.0.1:{}", port);
-    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+    let listener = match tokio::net::TcpListener::bind(&addr).await {
+        Ok(l) => l,
+        Err(e) => {
+            eprintln!("[!] Could not bind to port {}: {}", port, e);
+            return;
+        }
+    };
+
     println!("[*] Web UI is running!");
     println!("[*] Open http://{} in your browser.", addr);
-    axum::serve(listener, app).await.unwrap();
+
+    if let Err(e) = axum::serve(listener, app).await {
+        eprintln!("[!] Server error: {}", e);
+    }
 }
 
 async fn start_scan(
@@ -116,8 +126,13 @@ async fn scan_stream(
         }
     };
 
-    let mapped_stream =
-        stream.map(|ev| Ok(Event::default().data(serde_json::to_string(&ev).unwrap())));
+    let mapped_stream = stream.map(|ev| {
+        let data = match serde_json::to_string(&ev) {
+            Ok(d) => d,
+            Err(_) => "{\"event\":\"Error\",\"message\":\"Serialization error\"}".to_string(),
+        };
+        Ok(Event::default().data(data))
+    });
 
     Sse::new(mapped_stream).keep_alive(axum::response::sse::KeepAlive::new())
 }
