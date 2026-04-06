@@ -1,0 +1,18 @@
+# Set default behavior to automatically guess line endings
+* text=auto eol=lf
+
+# Explicitly declare file types
+*.rs text diff=rust
+*.toml text
+*.html text
+*.css text
+*.js text
+*.md text
+*.ps1 text
+
+# Mark binaries
+*.webp binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.exe binary

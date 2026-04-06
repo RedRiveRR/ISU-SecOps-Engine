@@ -23,3 +23,8 @@ Thumbs.db
 # Project specific
 common.txt
 !common.txt
+.env
+.env.*
+demo/*.webp
+demo/*.png
+!demo/.gitkeep
