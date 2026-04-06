@@ -67,6 +67,14 @@ cargo run --release -- pentest dirbrute "http://target.com" --stealth --crawler 
 
 ---
 
+### 🎬 Demo
+
+Aşağıdaki videoda aracın Web arayüzü üzerinden bir yerel laboratuvar ortamında nasıl çalıştığını izleyebilirsiniz:
+
+![Project Demo Video](demo/project-demo.webm)
+
+---
+
 ### 📊 CLI Parametre Referansı
 
 | Parametre | Kısa | Açıklama |
