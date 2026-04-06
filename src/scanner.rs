@@ -221,20 +221,20 @@ pub async fn run_dirbrute(args: DirbruteArgs) {
 }
 
 /// Core execution engine for the directory bruteforcer.
-/// 
+///
 /// # Architecture
-/// This function implements a highly concurrent, asynchronous polling engine using 
-/// `tokio`'s MPSC channels and Semaphores. It integrates several advanced security 
+/// This function implements a highly concurrent, asynchronous polling engine using
+/// `tokio`'s MPSC channels and Semaphores. It integrates several advanced security
 /// assessment modules:
-/// 
+///
 /// 1. **Adaptive Concurrency**: Automatically scales worker threads based on server latency.
 /// 2. **Deep Stealth**: Implements contextual blending and autonomous cool-down periods.
 /// 3. **Heuristic Detection**: Filters 'Soft-404' responses using baseline profiling.
 /// 4. **Dynamic Crawler**: Recursively extracts and processes links from HTML/JS/CSS.
 ///
 /// # Academic Implementation Note
-/// The engine is designed with a "Safety-First" approach, ensuring that even under 
-/// high concurrency, the target server is not overwhelmed (DoS protection) through 
+/// The engine is designed with a "Safety-First" approach, ensuring that even under
+/// high concurrency, the target server is not overwhelmed (DoS protection) through
 /// the use of `tokio::sync::Semaphore`.
 pub async fn run_dirbrute_core(
     args: DirbruteArgs,
@@ -343,7 +343,10 @@ pub async fn run_dirbrute_core(
                 } else {
                     let _ = tx
                         .send(ScanEvent::StealthStatus {
-                            message: format!("Wordlist ({}) bulunamadı, dahili patenlerle devam ediliyor.", wordlist_path),
+                            message: format!(
+                                "Wordlist ({}) bulunamadı, dahili patenlerle devam ediliyor.",
+                                wordlist_path
+                            ),
                         })
                         .await;
                 }
