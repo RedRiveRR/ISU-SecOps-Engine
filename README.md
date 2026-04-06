@@ -69,9 +69,13 @@ cargo run --release -- pentest dirbrute "http://target.com" --stealth --crawler 
 
 ### 🎬 Demo
 
-Aşağıdaki videoda aracın Web arayüzü üzerinden bir yerel laboratuvar ortamında nasıl çalıştığını izleyebilirsiniz:
+Aracın hem Web arayüzü hem de Terminal (CLI) üzerinden kullanım demolarını aşağıdan izleyebilirsiniz:
 
-![Project Demo Video](demo/project-demo.webp)
+#### 🌐 Web Interface (Glassmorphism & Real-time)
+![Web Demo Video](demo/project-demo.webp)
+
+#### 💻 Terminal Interface (High-Performance CLI)
+![CLI Demo Video](demo/cli-demo.webp)
 
 ---
 
