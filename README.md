@@ -72,10 +72,10 @@ cargo run --release -- pentest dirbrute "http://target.com" --stealth --crawler 
 Aracın hem Web arayüzü hem de Terminal (CLI) üzerinden kullanım demolarını aşağıdan izleyebilirsiniz:
 
 #### 🌐 Web Interface (Glassmorphism & Real-time)
-![Web Demo Video](demo/project-demo.webp)
+![Web Demo Video](demo/web-demo-v2.webp)
 
 #### 💻 Terminal Interface (High-Performance CLI)
-![CLI Demo Video](demo/cli-demo.webp)
+![CLI Demo Video](demo/cli-demo-v4.webp)
 
 ---
 
