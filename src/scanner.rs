@@ -293,25 +293,45 @@ pub async fn run_dirbrute_core(
 
     // 1. Manüel Wordlist Yükle
     if let Some(wordlist_path) = &args.wordlist {
-        match File::open(wordlist_path).await {
-            Ok(file) => {
-                let reader = BufReader::new(file);
-                let mut lines = reader.lines();
-                while let Ok(Some(line)) = lines.next_line().await {
-                    let trimmed = line.trim().to_string();
-                    if !trimmed.is_empty() && !trimmed.starts_with('#') {
-                        paths.push(trimmed);
+        let path = Path::new(wordlist_path);
+        let final_path = if path.exists() {
+            Some(path.to_path_buf())
+        } else {
+            let alt_path = Path::new("wordlists").join(wordlist_path);
+            if alt_path.exists() {
+                Some(alt_path)
+            } else {
+                None
+            }
+        };
+
+        match final_path {
+            Some(p) => {
+                if let Ok(file) = File::open(p).await {
+                    let reader = BufReader::new(file);
+                    let mut lines = reader.lines();
+                    while let Ok(Some(line)) = lines.next_line().await {
+                        let trimmed = line.trim().to_string();
+                        if !trimmed.is_empty() && !trimmed.starts_with('#') {
+                            paths.push(trimmed);
+                        }
                     }
                 }
             }
-            Err(_) => {
+            None => {
                 if !args.auto_wordlist {
                     let _ = tx
                         .send(ScanEvent::Error {
-                            message: "Wordlist açılamadı".into(),
+                            message: format!("Wordlist bulunamadı: {}", wordlist_path),
                         })
                         .await;
                     return Ok(vec![]);
+                } else {
+                    let _ = tx
+                        .send(ScanEvent::StealthStatus {
+                            message: format!("Wordlist ({}) bulunamadı, dahili patenlerle devam ediliyor.", wordlist_path),
+                        })
+                        .await;
                 }
             }
         }

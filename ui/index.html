@@ -394,12 +394,15 @@
 
             <div class="form-group">
                 <label for="target_url">Target URL</label>
-                <input type="url" id="target_url" placeholder="http://example.com" required value="http://localhost:8000">
+                <div style="position:relative;">
+                    <input type="url" id="target_url" placeholder="https://example.com" required value="">
+                    <button onclick="document.getElementById('target_url').value=''" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:18px;">&times;</button>
+                </div>
             </div>
 
             <div class="form-group">
                 <label for="wordlist_path">Wordlist Path</label>
-                <input type="text" id="wordlist_path" placeholder="common.txt" value="common.txt">
+                <input type="text" id="wordlist_path" placeholder="wordlists/common.txt" value="wordlists/common.txt">
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none; margin-top: 4px;">
                     <input type="checkbox" id="auto_wordlist" style="width:auto;" onchange="toggleInputs()"> <span>Smart Mode (Auto)</span>
                 </label>
