@@ -3,7 +3,7 @@
 <div align="center">
   <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/İstinye_Üniversitesi_logo.svg/960px-İstinye_Üniversitesi_logo.svg.png" width="300" />
   <br>
-  <h1>İstinye Üniversitesi - Security Operations Lab</h1>
+  <h1>İstinye Üniversitesi - Bilişim Güvenliği Teknolojileri</h1>
   <h3>Academic Supervisor: Öğr. Gör. Keyvan Arasteh Abbasabad</h3>
   <br>
   <img src="https://img.shields.io/badge/VERSION-1.1.0-blue?style=for-the-badge&logo=github" />
@@ -128,5 +128,5 @@ Bu proje **MIT Lisansı** ile lisanslanmıştır. Araç yalnızca yasal penetras
 
 ---
 <div align="center">
-  <sub>İstinye Üniversitesi Güvenlik Laboratuvarı için ❤️ ve 🦀 ile üretilmiştir.</sub>
+  <sub>İstinye Üniversitesi için ❤️ ve 🦀 ile üretilmiştir.</sub>
 </div>
